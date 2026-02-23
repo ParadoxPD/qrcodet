@@ -59,6 +59,7 @@ export default function App() {
     themeId: "classic",
     qrStyle: "rounded",
     cornerStyle: "rounded",
+    errorLevel: "M",
     frameId: "scan",
   });
   const [matrix, setMatrix] = useState(null);
@@ -147,12 +148,12 @@ export default function App() {
       return;
     }
     try {
-      setMatrix(buildQrMatrix(payloadResult.payload));
+      setMatrix(buildQrMatrix(payloadResult.payload, appearance.errorLevel));
     } catch (error) {
       setMatrix(null);
       setRuntimeError(error?.message || "Failed to generate QR matrix.");
     }
-  }, [mode, payloadResult.payload]);
+  }, [mode, payloadResult.payload, appearance.errorLevel]);
 
   useEffect(() => {
     if (mode !== "qr") return;
@@ -177,10 +178,10 @@ export default function App() {
       if (barcodeRef.current) barcodeRef.current.innerHTML = "";
       return;
     }
-    const result = renderBarcodeToSvg(barcodeRef.current, payloadResult.payload, selectedUseCase.format, theme);
+    const result = renderBarcodeToSvg(barcodeRef.current, payloadResult.payload, selectedUseCase.format, selectedUseCase.renderer, theme);
     setHasCode(result.ok);
     setRuntimeError(result.error);
-  }, [mode, payloadResult.payload, selectedUseCase.format, theme]);
+  }, [mode, payloadResult.payload, selectedUseCase.format, selectedUseCase.renderer, theme]);
 
   useEffect(() => {
     const defaults = selectedUseCase.defaults || {};
@@ -211,7 +212,7 @@ export default function App() {
   const downloadPng = async () => {
     if (!hasCode) return;
     if (frameCaptureRef.current) {
-      const data = await toPng(frameCaptureRef.current, { cacheBust: true, pixelRatio: 3 });
+      const data = await toPng(frameCaptureRef.current, { cacheBust: true, pixelRatio: 5 });
       const link = document.createElement("a");
       link.download = `${fileBase}.png`;
       link.href = data;
@@ -270,7 +271,7 @@ export default function App() {
       <header className="topbar">
         <div>
           <p className="brand-kicker">QRCodet Studio</p>
-          <h1>Extensible QR & Barcode Builder</h1>
+          <h1>QR & Barcode Builder</h1>
           <p className="tagline">High-resolution outputs, modular use-case definitions, branded themes, and reusable team presets.</p>
         </div>
       </header>

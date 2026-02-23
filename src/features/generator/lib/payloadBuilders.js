@@ -27,6 +27,10 @@ const buildURL = (values) => {
   return { payload, error: "" };
 };
 
+const buildYouTube = (values) => buildURL(values);
+
+const buildX = (values) => buildURL(values);
+
 const buildWiFi = (values) => {
   const ssid = safe(values.ssid);
   if (!ssid) return { payload: "", error: "SSID is required." };
@@ -71,6 +75,57 @@ const buildEmail = (values) => {
   return { payload: `mailto:${to}${suffix}`, error: "" };
 };
 
+const toIcsUTC = (value) => {
+  const date = new Date(value);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(date.getUTCDate())}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}Z`;
+};
+
+const buildGeo = (values) => {
+  const lat = safe(values.lat);
+  const lng = safe(values.lng);
+  const label = safe(values.label);
+  if (!lat || !lng) return { payload: "", error: "Latitude and Longitude are required." };
+  const query = label ? `?q=${encodeURIComponent(label)}` : "";
+  return { payload: `geo:${lat},${lng}${query}`, error: "" };
+};
+
+const buildCalendar = (values) => {
+  const title = safe(values.title);
+  const start = safe(values.start);
+  const end = safe(values.end);
+  if (!title || !start || !end) return { payload: "", error: "Title, Start, and End are required." };
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    `SUMMARY:${title}`,
+    `DTSTART:${toIcsUTC(start)}`,
+    `DTEND:${toIcsUTC(end)}`,
+    safe(values.location) ? `LOCATION:${safe(values.location)}` : "",
+    safe(values.description) ? `DESCRIPTION:${safe(values.description)}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].filter(Boolean);
+  return { payload: lines.join("\n"), error: "" };
+};
+
+const buildEvent = (values) => {
+  const title = safe(values.title);
+  const start = safe(values.start);
+  const end = safe(values.end);
+  if (!title || !start || !end) return { payload: "", error: "Title, Start, and End are required." };
+  const lines = [
+    `EVENT:${title}`,
+    `START:${start}`,
+    `END:${end}`,
+    safe(values.location) ? `LOCATION:${safe(values.location)}` : "",
+    safe(values.host) ? `HOST:${safe(values.host)}` : "",
+    safe(values.url) ? `URL:${safe(values.url)}` : "",
+  ].filter(Boolean);
+  return { payload: lines.join("\n"), error: "" };
+};
+
 const buildText = (values) => {
   const text = safe(values.text);
   if (!text) return { payload: "", error: "Text is required." };
@@ -80,8 +135,13 @@ const buildText = (values) => {
 const BUILDERS = {
   upi: buildUPI,
   url: buildURL,
+  youtube: buildYouTube,
+  x: buildX,
   wifi: buildWiFi,
   vcard: buildVCard,
+  geo: buildGeo,
+  calendar: buildCalendar,
+  event: buildEvent,
   sms: buildSMS,
   email: buildEmail,
   text: buildText,

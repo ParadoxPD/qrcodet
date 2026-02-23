@@ -18,7 +18,11 @@ const fieldInput = (field, value, onChange) => {
     );
   }
   if (field.type === "checkbox") {
-    return <input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(field.name, event.target.checked)} />;
+    return (
+      <span className="checkbox-wrap">
+        <input className="themed-checkbox" type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(field.name, event.target.checked)} />
+      </span>
+    );
   }
   return (
     <input
@@ -149,6 +153,20 @@ export default function GeneratorControls({
 
         {mode === "qr" && (
           <>
+            <p className="eyebrow compact">Error Correction</p>
+            <div className="frame-row">
+              {["L", "M", "Q", "H"].map((level) => (
+                <button
+                  key={level}
+                  className={appearance.errorLevel === level ? "pill active" : "pill"}
+                  onClick={() => setAppearance("errorLevel", level)}
+                  title={`Error correction level ${level}`}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
+
             <p className="eyebrow compact">QR Dot Style</p>
             <div className="pattern-row">
               {qrStyles.map((style) => (
@@ -187,7 +205,10 @@ export default function GeneratorControls({
 
             <p className="eyebrow compact">Center Logo</p>
             <div className="logo-row">
-              <input type="file" accept="image/*" onChange={onLogoChange} />
+              <label className="upload-btn">
+                <input type="file" accept="image/*" onChange={onLogoChange} />
+                <span>Choose Logo</span>
+              </label>
               {logoPreview ? (
                 <>
                   <img src={logoPreview} alt="logo preview" />
@@ -205,7 +226,7 @@ export default function GeneratorControls({
         <p className="eyebrow">Preset Library</p>
         <div className="preset-row">
           <input className="input" value={presetName} placeholder="Preset name" onChange={(event) => setPresetName(event.target.value)} />
-          <button className="solid" onClick={onSavePreset}>
+          <button className="solid preset-save" onClick={onSavePreset}>
             Save Preset
           </button>
         </div>

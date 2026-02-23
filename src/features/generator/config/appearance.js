@@ -27,6 +27,8 @@ export const QR_STYLES = [
   { id: "squircle", label: "Squircle" },
   { id: "kite", label: "Kite" },
   { id: "plus", label: "Plus" },
+  { id: "star", label: "Star" },
+  { id: "cross", label: "Cross" },
   { id: "bars_v", label: "Vertical Bars" },
 ];
 

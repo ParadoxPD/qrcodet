@@ -5,6 +5,9 @@ const isUrl = (value) => /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/.*)?$/i.test((va
 const isPhone = (value) => /^\+?[0-9]{8,15}$/.test((value || "").trim());
 const upiId = (value) => /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z0-9.\-_]{2,}$/.test((value || "").trim());
 const decimal = (value) => /^([1-9]\d{0,6}|0)(\.\d{1,2})?$/.test((value || "").trim());
+const latitude = (value) => /^-?([1-8]?\d(\.\d+)?|90(\.0+)?)$/.test((value || "").trim());
+const longitude = (value) => /^-?((1[0-7]\d|\d?\d)(\.\d+)?|180(\.0+)?)$/.test((value || "").trim());
+const isoDateTime = (value) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test((value || "").trim());
 
 const buildField = (config) => ({
   ...config,
@@ -84,6 +87,42 @@ export const QR_USE_CASES = [
         placeholder: "https://example.com",
         required: true,
         validate: (v) => (hasText(v) && isUrl(v) ? "" : "Enter a valid URL."),
+      }),
+    ],
+  },
+  {
+    id: "youtube",
+    label: "YouTube",
+    description: "Open a video or channel quickly.",
+    filenamePrefix: "youtube-qr",
+    builder: "youtube",
+    defaults: { header: "Watch on YouTube", footer: "Scan to open" },
+    fields: [
+      buildField({
+        name: "url",
+        label: "YouTube URL",
+        helperText: "Paste full video/channel URL.",
+        placeholder: "https://www.youtube.com/watch?v=...",
+        required: true,
+        validate: (v) => (hasText(v) && isUrl(v) ? "" : "Enter a valid YouTube URL."),
+      }),
+    ],
+  },
+  {
+    id: "x",
+    label: "X Link",
+    description: "Share X profile or post links.",
+    filenamePrefix: "x-qr",
+    builder: "x",
+    defaults: { header: "Open on X", footer: "Scan to open" },
+    fields: [
+      buildField({
+        name: "url",
+        label: "X URL",
+        helperText: "Profile or post URL.",
+        placeholder: "https://x.com/username/status/...",
+        required: true,
+        validate: (v) => (hasText(v) && isUrl(v) ? "" : "Enter a valid X URL."),
       }),
     ],
   },
@@ -171,6 +210,105 @@ export const QR_USE_CASES = [
     ],
   },
   {
+    id: "geolocation",
+    label: "Geolocation",
+    description: "Open map coordinates directly.",
+    filenamePrefix: "geo-qr",
+    builder: "geo",
+    defaults: { header: "Open Location", footer: "Geo shortcut" },
+    fields: [
+      buildField({
+        name: "lat",
+        label: "Latitude",
+        helperText: "Range: -90 to 90.",
+        placeholder: "28.6139",
+        required: true,
+        validate: (v) => (latitude(v) ? "" : "Latitude must be between -90 and 90."),
+      }),
+      buildField({
+        name: "lng",
+        label: "Longitude",
+        helperText: "Range: -180 to 180.",
+        placeholder: "77.2090",
+        required: true,
+        validate: (v) => (longitude(v) ? "" : "Longitude must be between -180 and 180."),
+      }),
+      buildField({
+        name: "label",
+        label: "Label",
+        helperText: "Optional marker title.",
+        placeholder: "Store Entrance",
+      }),
+    ],
+  },
+  {
+    id: "calendar",
+    label: "Calendar",
+    description: "Create a calendar event from scan.",
+    filenamePrefix: "calendar-qr",
+    builder: "calendar",
+    defaults: { header: "Save to Calendar", footer: "iCal event" },
+    fields: [
+      buildField({ name: "title", label: "Title", helperText: "Event title.", placeholder: "Demo Meeting", required: true, validate: (v) => (hasText(v) ? "" : "Title is required.") }),
+      buildField({
+        name: "start",
+        label: "Start",
+        helperText: "Use local date-time format.",
+        type: "datetime-local",
+        required: true,
+        validate: (v) => (isoDateTime(v) ? "" : "Start must be in valid date-time format."),
+      }),
+      buildField({
+        name: "end",
+        label: "End",
+        helperText: "Must be later than Start.",
+        type: "datetime-local",
+        required: true,
+        validate: (v, all) => {
+          if (!isoDateTime(v)) return "End must be in valid date-time format.";
+          if (isoDateTime(all.start) && new Date(v).getTime() <= new Date(all.start).getTime()) return "End must be later than Start.";
+          return "";
+        },
+      }),
+      buildField({ name: "location", label: "Location", helperText: "Address or venue.", placeholder: "Conference Room A" }),
+      buildField({ name: "description", label: "Description", helperText: "Optional details.", placeholder: "Agenda and context." }),
+    ],
+  },
+  {
+    id: "event",
+    label: "Event",
+    description: "Detailed public event payload.",
+    filenamePrefix: "event-qr",
+    builder: "event",
+    defaults: { header: "Event Pass", footer: "Scan for details" },
+    fields: [
+      buildField({ name: "title", label: "Title", helperText: "Event name.", placeholder: "Launch Party", required: true, validate: (v) => (hasText(v) ? "" : "Title is required.") }),
+      buildField({
+        name: "start",
+        label: "Start",
+        helperText: "Use local date-time format.",
+        type: "datetime-local",
+        required: true,
+        validate: (v) => (isoDateTime(v) ? "" : "Start must be in valid date-time format."),
+      }),
+      buildField({
+        name: "end",
+        label: "End",
+        helperText: "Must be later than Start.",
+        type: "datetime-local",
+        required: true,
+        validate: (v, all) => {
+          if (!isoDateTime(v)) return "End must be in valid date-time format.";
+          if (isoDateTime(all.start) && new Date(v).getTime() <= new Date(all.start).getTime()) return "End must be later than Start.";
+          return "";
+        },
+      }),
+      buildField({ name: "location", label: "Location", helperText: "Venue details.", placeholder: "Auditorium" }),
+      buildField({ name: "host", label: "Host", helperText: "Organizer or host name.", placeholder: "QRCodet Team" }),
+      buildField({ name: "url", label: "Event URL", helperText: "Registration or details page.", placeholder: "https://example.com/event", validate: (v) => (!hasText(v) || isUrl(v) ? "" : "Enter a valid URL.") }),
+    ],
+  },
+  {
     id: "sms",
     label: "SMS",
     description: "Pre-fill a message with one scan.",
@@ -210,18 +348,8 @@ export const QR_USE_CASES = [
         required: true,
         validate: (v) => (hasText(v) && isEmail(v) ? "" : "Recipient email is invalid."),
       }),
-      buildField({
-        name: "subject",
-        label: "Subject",
-        helperText: "Mail subject line.",
-        placeholder: "Demo request",
-      }),
-      buildField({
-        name: "body",
-        label: "Body",
-        helperText: "Mail body content.",
-        placeholder: "Please share details...",
-      }),
+      buildField({ name: "subject", label: "Subject", helperText: "Mail subject line.", placeholder: "Demo request" }),
+      buildField({ name: "body", label: "Body", helperText: "Mail body content.", placeholder: "Please share details..." }),
     ],
   },
   {
@@ -251,33 +379,20 @@ export const BARCODE_USE_CASES = [
     description: "Best general-purpose barcode for IDs and labels.",
     filenamePrefix: "code128",
     format: "CODE128",
-    fields: [
-      buildField({
-        name: "value",
-        label: "Value",
-        helperText: "Alphanumeric value allowed.",
-        placeholder: "INV-2026-001",
-        required: true,
-        validate: (v) => (hasText(v) ? "" : "Barcode value is required."),
-      }),
-    ],
+    renderer: "js",
+    fields: [buildField({ name: "value", label: "Value", helperText: "Alphanumeric value allowed.", placeholder: "INV-2026-001", required: true, validate: (v) => (hasText(v) ? "" : "Barcode value is required.") })],
   },
+  { id: "code39", label: "Code 39", description: "Classic warehouse barcode.", filenamePrefix: "code39", format: "CODE39", renderer: "js", fields: [buildField({ name: "value", label: "Value", helperText: "Uppercase + digits recommended.", placeholder: "STOCK-39", required: true, validate: (v) => (hasText(v) ? "" : "Code 39 value is required.") })] },
+  { id: "code93", label: "Code 93", description: "Compact alphanumeric barcode.", filenamePrefix: "code93", format: "CODE93", renderer: "js", fields: [buildField({ name: "value", label: "Value", helperText: "Supports wider symbol set than Code 39.", placeholder: "ITEM93-A1", required: true, validate: (v) => (hasText(v) ? "" : "Code 93 value is required.") })] },
+  { id: "codabar", label: "CODABAR", description: "Used in libraries and blood banks.", filenamePrefix: "codabar", format: "CODABAR", renderer: "js", fields: [buildField({ name: "value", label: "Value", helperText: "Digits and A/B/C/D start-stop chars.", placeholder: "A123456A", required: true, validate: (v) => (hasText(v) ? "" : "CODABAR value is required.") })] },
   {
     id: "ean13",
     label: "EAN-13",
     description: "Retail product code for global markets.",
     filenamePrefix: "ean13",
     format: "EAN13",
-    fields: [
-      buildField({
-        name: "value",
-        label: "13 Digits",
-        helperText: "Numbers only. Must be exactly 13 digits.",
-        placeholder: "5901234123457",
-        required: true,
-        validate: (v) => (digits(v, 13) ? "" : "EAN-13 value must be exactly 13 digits."),
-      }),
-    ],
+    renderer: "js",
+    fields: [buildField({ name: "value", label: "13 Digits", helperText: "Numbers only. Must be exactly 13 digits.", placeholder: "5901234123457", required: true, validate: (v) => (digits(v, 13) ? "" : "EAN-13 value must be exactly 13 digits.") })],
   },
   {
     id: "upca",
@@ -285,16 +400,17 @@ export const BARCODE_USE_CASES = [
     description: "Common barcode for North American retail.",
     filenamePrefix: "upca",
     format: "UPC",
-    fields: [
-      buildField({
-        name: "value",
-        label: "12 Digits",
-        helperText: "Numbers only. Must be exactly 12 digits.",
-        placeholder: "036000291452",
-        required: true,
-        validate: (v) => (digits(v, 12) ? "" : "UPC-A value must be exactly 12 digits."),
-      }),
-    ],
+    renderer: "js",
+    fields: [buildField({ name: "value", label: "12 Digits", helperText: "Numbers only. Must be exactly 12 digits.", placeholder: "036000291452", required: true, validate: (v) => (digits(v, 12) ? "" : "UPC-A value must be exactly 12 digits.") })],
+  },
+  {
+    id: "upce",
+    label: "UPC-E",
+    description: "Compressed UPC for small products.",
+    filenamePrefix: "upce",
+    format: "UPCE",
+    renderer: "js",
+    fields: [buildField({ name: "value", label: "6-8 Digits", helperText: "Compact UPC input.", placeholder: "04210005", required: true, validate: (v) => (/^\d{6,8}$/.test((v || "").trim()) ? "" : "UPC-E value must be 6 to 8 digits.") })],
   },
   {
     id: "ean8",
@@ -302,16 +418,8 @@ export const BARCODE_USE_CASES = [
     description: "Compact retail barcode for smaller packaging.",
     filenamePrefix: "ean8",
     format: "EAN8",
-    fields: [
-      buildField({
-        name: "value",
-        label: "8 Digits",
-        helperText: "Numbers only. Must be exactly 8 digits.",
-        placeholder: "55123457",
-        required: true,
-        validate: (v) => (digits(v, 8) ? "" : "EAN-8 value must be exactly 8 digits."),
-      }),
-    ],
+    renderer: "js",
+    fields: [buildField({ name: "value", label: "8 Digits", helperText: "Numbers only. Must be exactly 8 digits.", placeholder: "55123457", required: true, validate: (v) => (digits(v, 8) ? "" : "EAN-8 value must be exactly 8 digits.") })],
   },
   {
     id: "itf14",
@@ -319,15 +427,34 @@ export const BARCODE_USE_CASES = [
     description: "Shipping carton barcode for logistics.",
     filenamePrefix: "itf14",
     format: "ITF14",
-    fields: [
-      buildField({
-        name: "value",
-        label: "14 Digits",
-        helperText: "Numbers only. Must be exactly 14 digits.",
-        placeholder: "10012345000017",
-        required: true,
-        validate: (v) => (digits(v, 14) ? "" : "ITF-14 value must be exactly 14 digits."),
-      }),
-    ],
+    renderer: "js",
+    fields: [buildField({ name: "value", label: "14 Digits", helperText: "Numbers only. Must be exactly 14 digits.", placeholder: "10012345000017", required: true, validate: (v) => (digits(v, 14) ? "" : "ITF-14 value must be exactly 14 digits.") })],
+  },
+  {
+    id: "pdf417",
+    label: "PDF-417",
+    description: "Stacked 2D barcode for IDs and transport.",
+    filenamePrefix: "pdf417",
+    format: "PDF417",
+    renderer: "bwip",
+    fields: [buildField({ name: "value", label: "Value", helperText: "Text/structured payload.", placeholder: "ID#A9001288", required: true, validate: (v) => (hasText(v) ? "" : "PDF-417 value is required.") })],
+  },
+  {
+    id: "datamatrix",
+    label: "Data Matrix",
+    description: "Compact 2D code for industrial tracking.",
+    filenamePrefix: "datamatrix",
+    format: "DATAMATRIX",
+    renderer: "bwip",
+    fields: [buildField({ name: "value", label: "Value", helperText: "Short to medium payload recommended.", placeholder: "PART-001-LOT-992", required: true, validate: (v) => (hasText(v) ? "" : "Data Matrix value is required.") })],
+  },
+  {
+    id: "aztec",
+    label: "Aztec",
+    description: "2D code used in ticketing and transport.",
+    filenamePrefix: "aztec",
+    format: "AZTEC",
+    renderer: "bwip",
+    fields: [buildField({ name: "value", label: "Value", helperText: "Text/URL payload.", placeholder: "TICKET-9281", required: true, validate: (v) => (hasText(v) ? "" : "Aztec value is required.") })],
   },
 ];

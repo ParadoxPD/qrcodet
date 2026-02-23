@@ -217,10 +217,44 @@ select {
 }
 
 .checkbox-field {
-  align-self: center;
+  align-items: start;
   letter-spacing: 0.02em;
   text-transform: none;
   font-size: 0.9rem;
+}
+
+.checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.themed-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid var(--c-border);
+  appearance: none;
+  background: var(--c-surface-2);
+  cursor: pointer;
+  position: relative;
+}
+
+.themed-checkbox:checked {
+  background: linear-gradient(135deg, #c3932f, #8f5c14);
+  border-color: #b07c25;
+}
+
+.themed-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid #18130a;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .input {
@@ -308,8 +342,21 @@ select {
 }
 
 .logo-row input[type="file"] {
-  max-width: 220px;
-  color: var(--c-muted);
+  display: none;
+}
+
+.upload-btn {
+  border: 1px solid var(--c-border);
+  background: #17140f;
+  color: var(--c-text);
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.upload-btn:hover {
+  border-color: var(--c-accent);
 }
 
 .logo-row img {
@@ -475,6 +522,12 @@ select {
   color: #18130a;
   border: none;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.preset-save {
+  border-radius: 999px;
+  padding-inline: 16px;
 }
 
 .payload-panel pre {
@@ -655,11 +708,11 @@ select {
 
 .frame.strip {
   display: grid;
-  grid-template-columns: 46px 1fr;
+  grid-template-columns: 42px 1fr;
   background: var(--frame-bg);
   border-radius: 14px;
   overflow: hidden;
-  border: 2px solid var(--frame-fg);
+  border: 2px solid color-mix(in srgb, var(--frame-fg) 85%, transparent);
 }
 
 .strip-side {
@@ -670,7 +723,8 @@ select {
 }
 
 .strip-side span {
-  transform: rotate(-90deg);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
   letter-spacing: 0.12em;
   font-size: 0.68rem;
   font-weight: 700;
@@ -717,10 +771,11 @@ select {
 .qr-canvas,
 .barcode-svg {
   display: block;
-  width: 288px;
+  width: 320px;
   max-width: 100%;
   opacity: 0;
   transition: opacity 220ms ease;
+  image-rendering: pixelated;
 }
 
 .barcode-svg {
