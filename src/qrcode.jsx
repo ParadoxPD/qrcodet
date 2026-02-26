@@ -69,6 +69,7 @@ export default function App() {
   const [logoImage, setLogoImage] = useState(null);
   const [presets, setPresets] = useState(loadPresets);
   const [presetName, setPresetName] = useState("");
+  const [exportModal, setExportModal] = useState({ open: false, label: "" });
 
   const qrCanvasRef = useRef(null);
   const barcodeRef = useRef(null);
@@ -196,27 +197,56 @@ export default function App() {
   const fileBase = `${selectedUseCase.filenamePrefix}-${Date.now()}`;
   const metaLine = mode === "qr" ? values.pn || values.name || values.url || "" : values.value || "";
 
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const openExportModal = async (label) => {
+    setExportModal({ open: true, label });
+    await wait(40);
+    await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+  };
+
+  const closeExportModal = async (startedAt, minVisibleMs = 1200) => {
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < minVisibleMs) {
+      await wait(minVisibleMs - elapsed);
+    }
+    setExportModal({ open: false, label: "" });
+  };
+
   const downloadSvg = () => {
     if (!hasCode) return;
     if (!frameCaptureRef.current) return;
-    toSvg(frameCaptureRef.current, { cacheBust: true })
+    const startedAt = Date.now();
+    openExportModal("Preparing SVG export...")
+      .then(() => toSvg(frameCaptureRef.current, { cacheBust: true }))
       .then((dataUrl) => {
+        setExportModal({ open: true, label: "Starting SVG download..." });
         const link = document.createElement("a");
         link.download = `${fileBase}.svg`;
         link.href = dataUrl;
         link.click();
       })
-      .catch(() => {});
+      .catch(() => setRuntimeError("Failed to export SVG."))
+      .finally(() => closeExportModal(startedAt));
   };
 
   const downloadPng = async () => {
     if (!hasCode) return;
     if (frameCaptureRef.current) {
-      const data = await toPng(frameCaptureRef.current, { cacheBust: true, pixelRatio: 5 });
-      const link = document.createElement("a");
-      link.download = `${fileBase}.png`;
-      link.href = data;
-      link.click();
+      const startedAt = Date.now();
+      try {
+        await openExportModal("Preparing PNG export...");
+        const data = await toPng(frameCaptureRef.current, { cacheBust: true, pixelRatio: 5 });
+        setExportModal({ open: true, label: "Starting PNG download..." });
+        const link = document.createElement("a");
+        link.download = `${fileBase}.png`;
+        link.href = data;
+        link.click();
+      } catch {
+        setRuntimeError("Failed to export PNG.");
+      } finally {
+        await closeExportModal(startedAt);
+      }
     }
   };
 
@@ -321,6 +351,15 @@ export default function App() {
           onDownloadSvg={downloadSvg}
         />
       </section>
+
+      {exportModal.open ? (
+        <div className="modal-backdrop" role="status" aria-live="polite">
+          <div className="modal-card">
+            <div className="spinner" />
+            <p>{exportModal.label}</p>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

@@ -788,6 +788,43 @@ select {
   opacity: 1;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 6, 4, 0.58);
+  display: grid;
+  place-items: center;
+  z-index: 80;
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  min-width: 240px;
+  border: 1px solid var(--c-border);
+  background: linear-gradient(145deg, rgba(28, 24, 17, 0.97), rgba(15, 13, 10, 0.98));
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-card);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.modal-card p {
+  margin: 0;
+  color: var(--c-text);
+  font-size: 0.9rem;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid rgba(195, 147, 47, 0.2);
+  border-top-color: var(--c-accent);
+  animation: spin 0.75s linear infinite;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -806,6 +843,12 @@ select {
   }
   50% {
     opacity: 0.45;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
