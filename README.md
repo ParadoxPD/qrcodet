@@ -1,137 +1,89 @@
-# QR & Barcode Builder
+# QRCodet
 
-A modular, theme-driven generator studio for production-ready QR codes and barcodes.
+QRCodet is now split into two apps:
 
-This project is built with React + Vite and is designed to be extended through config-first use cases, reusable renderers, and consistent UI primitives.
+- `web/`: the React + Vite web studio
+- `mobile/`: the Flutter mobile app
 
-## Highlights
+Both targets support QR and barcode generation, themed previews, reusable presets, and scanning workflows.
 
-- High-quality QR rendering with crisp edges and large export resolution.
-- Full framed downloads (PNG/SVG) including selected layout style.
-- Light and dark theme sets with frame-aware styling.
-- QR customization:
-  - Dot styles
-  - Corner box styles
-  - Error correction levels (`L`, `M`, `Q`, `H`)
-  - Center logo embedding
-- Preset save/load/delete for reusable branded configurations.
-- Field-level helper text, strict validation, and reference panel.
+## Repo Layout
 
-## Supported Generators
+```text
+.
+├── web/
+│   ├── src/
+│   ├── public/
+│   └── package.json
+├── mobile/
+│   ├── lib/
+│   ├── android/
+│   ├── ios/
+│   └── pubspec.yaml
+├── DESIGN_STYLE.md
+└── README.md
+```
 
-### QR Use Cases
+## Web App
 
-- UPI Payment
-- Website URL
-- YouTube
-- X
-- WiFi
-- Contact (vCard)
-- Geolocation
-- Calendar
-- Event
-- SMS
-- Email
-- Plain Text
+Features:
 
-### Barcode Use Cases
+- QR and barcode generation across all existing use cases
+- Responsive mobile browser layout
+- Collapsible use-case selection and field-reference panels for small screens
+- Realtime QR/barcode scanning from camera
+- QR/barcode image upload decoding
+- Parsed scan details: code type, structured fields, and payload metadata
+- PNG/SVG export and local preset storage
 
-- Code 128
-- Code 39
-- Code 93
-- CODABAR
-- EAN-13
-- UPC-A
-- UPC-E
-- EAN-8
-- ITF-14
-- PDF-417
-- Data Matrix
-- Aztec
-
-## Tech Stack
-
-- `react`, `react-dom`
-- `vite`, `@vitejs/plugin-react`
-- `qrcode-generator` for QR matrix generation
-- `jsbarcode` for 1D barcode families
-- `bwip-js` for advanced 2D barcodes (PDF-417, Data Matrix, Aztec)
-- `html-to-image` for full-frame PNG/SVG exports
-
-## Quick Start
+Run locally:
 
 ```bash
+cd web
 npm install
 npm run dev
 ```
 
-Production build:
+Build:
 
 ```bash
+cd web
 npm run build
-npm run preview
 ```
 
-## Project Structure
+## Mobile App
 
-```text
-src/
-  main.jsx
-  qrcode.jsx
-  style.css
-  features/
-    generator/
-      components/
-        CodeFrame.jsx
-        GeneratorControls.jsx
-        PatternIcon.jsx
-        PreviewPane.jsx
-      config/
-        appearance.js
-        useCases.js
-      lib/
-        barcodeRenderer.js
-        download.js
-        payloadBuilders.js
-        qrRenderer.js
-public/
-  favicon.svg
+Features:
+
+- Flutter implementation of the generator studio
+- QR and barcode creation with themed framed previews
+- Realtime QR/barcode scanning with camera switching and torch control
+- Image-based scan analysis from local gallery
+- Local save-to-storage workflow with a dedicated `QRCodetGallery` folder
+- In-app gallery of generated codes
+- Settings for app theme, generator defaults, camera scan behavior, save folder, and scan-history limit
+- Persistent scan history with configurable cap
+
+Run locally:
+
+```bash
+cd mobile
+flutter run
 ```
 
-## How to Extend
+Validate/build:
 
-### Add a new QR use case
+```bash
+cd mobile
+flutter analyze
+flutter build apk --debug
+```
 
-1. Add the use case in `src/features/generator/config/useCases.js`.
-2. Add the payload builder in `src/features/generator/lib/payloadBuilders.js`.
-3. Keep fields config-driven (labels, validation, helper text) so UI updates automatically.
+## Notes
 
-### Add a new barcode type
-
-1. Add config entry in `useCases.js` with:
-   - `format`
-   - `renderer` (`js` or `bwip`)
-2. Ensure `barcodeRenderer.js` supports that format.
-
-### Add a theme/frame/style
-
-1. Add entries in `src/features/generator/config/appearance.js`.
-2. Add render/UI support in:
-   - `PatternIcon.jsx` (for visible style picker icons)
-   - `CodeFrame.jsx` + `style.css` (for frame variants)
-
-## Design Notes
-
-Visual direction is documented in:
-
-- `DESIGN_STYLE.md`
-
-The app follows a "crafted utility" style:
-
-- editorial typography
-- warm dark surfaces
-- accent-led hierarchy
-- configurable but coherent component language
+- iOS usage descriptions for camera and photo access are configured in `mobile/ios/Runner/Info.plist`.
+- Android camera permission is configured in `mobile/android/app/src/main/AndroidManifest.xml`.
+- The web scanner uses ZXing via `@zxing/browser`.
 
 ## License
 
