@@ -1,4 +1,4 @@
-package com.paradox.qrcodet.qrcodet_mobile
+package com.paradox.qrcodet
 
 import io.flutter.embedding.android.FlutterActivity
 

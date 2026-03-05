@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:barcode_widget/barcode_widget.dart' hide Barcode;
+import 'package:custom_qr_generator/custom_qr_generator.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gal/gal.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zxing_lib/qrcode.dart';
 
 import '../core/data/app_catalog.dart';
 import '../core/logic/generator_logic.dart';
@@ -36,6 +40,8 @@ class QRCodetApp extends StatefulWidget {
 }
 
 class _QRCodetAppState extends State<QRCodetApp> {
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final ScreenshotController _previewShot = ScreenshotController();
   final ImagePicker _imagePicker = ImagePicker();
   final DateFormat _dateFormat = DateFormat('dd MMM yyyy, HH:mm');
@@ -63,7 +69,6 @@ class _QRCodetAppState extends State<QRCodetApp> {
   String _qrStyleId = 'rounded';
   String _cornerStyleId = 'rounded';
   String _qrErrorLevel = 'M';
-  Uint8List? _logoBytes;
   String _lastSavedPath = '';
   String _presetName = '';
   ScanInsight? _scanInsight;
@@ -113,7 +118,9 @@ class _QRCodetAppState extends State<QRCodetApp> {
             .map((item) => GeneratorPreset.fromJson(item as Map<String, dynamic>))
             .toList();
 
-    final saveDir = await resolveSaveDirectory(settings.saveRootPath);
+    final shouldMigrateSaveDir =
+        settings.saveRootPath.isEmpty || settings.saveRootPath.contains('qrcodet_mobile') || settings.saveRootPath.contains('/Android/data/');
+    final saveDir = await resolveSaveDirectory(shouldMigrateSaveDir ? '' : settings.saveRootPath);
     if (!mounted) return;
     setState(() {
       _settings = settings.copyWith(saveRootPath: saveDir.path, saveDirectoryPath: saveDir.path);
@@ -150,6 +157,8 @@ class _QRCodetAppState extends State<QRCodetApp> {
   }
 
   ThemeSpec get _activeTheme => _themes.firstWhere((item) => item.id == _generatorThemeId, orElse: () => _themes.first);
+  ThemeSpec get _appTheme => _themes.firstWhere((item) => item.id == _settings.appThemeId, orElse: () => _themes.first);
+  Color get _appTextColor => _materialTheme.brightness == Brightness.dark ? Colors.white : Colors.black;
 
   Map<String, dynamic> get _currentValues => _valuesMap['${_mode.name}:${_selectedUseCase.id}'] ?? <String, dynamic>{};
 
@@ -170,12 +179,16 @@ class _QRCodetAppState extends State<QRCodetApp> {
       primary: spec.accent,
       secondary: spec.dark,
       surface: spec.light,
+      onSurface: brightness == Brightness.dark ? Colors.white : Colors.black,
+      onSurfaceVariant: brightness == Brightness.dark ? Colors.white : Colors.black,
     );
+    final textColor = brightness == Brightness.dark ? Colors.white : Colors.black;
     final baseFill = brightness == Brightness.dark ? const Color(0xFF1A1712) : Colors.white;
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
+      canvasColor: brightness == Brightness.dark ? const Color(0xFF1A1712) : Colors.white,
       scaffoldBackgroundColor: brightness == Brightness.dark ? const Color(0xFF0E0D0A) : const Color(0xFFF5F1E7),
       cardTheme: CardThemeData(
         elevation: 0,
@@ -183,8 +196,8 @@ class _QRCodetAppState extends State<QRCodetApp> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
       textTheme: ThemeData(brightness: brightness).textTheme.apply(
-            bodyColor: brightness == Brightness.dark ? const Color(0xFFF3EEDF) : const Color(0xFF1D1A16),
-            displayColor: brightness == Brightness.dark ? const Color(0xFFF3EEDF) : const Color(0xFF1D1A16),
+            bodyColor: textColor,
+            displayColor: textColor,
           ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -198,6 +211,26 @@ class _QRCodetAppState extends State<QRCodetApp> {
       navigationBarTheme: NavigationBarThemeData(
         indicatorColor: spec.accent.withValues(alpha: brightness == Brightness.dark ? 0.28 : 0.2),
         backgroundColor: brightness == Brightness.dark ? const Color(0xFF14110D) : const Color(0xFFF8F4EA),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: brightness == Brightness.dark ? const Color(0xFF1A1712) : Colors.white,
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: brightness == Brightness.dark ? const Color(0xFF1A1712) : Colors.white,
+        textStyle: TextStyle(
+          color: textColor,
+        ),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: brightness == Brightness.dark ? const Color(0xFFF0EAD9) : const Color(0xFF1B1812),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        textStyle: TextStyle(
+          color: brightness == Brightness.dark ? const Color(0xFF1B1812) : const Color(0xFFF0EAD9),
+          fontSize: 12,
+        ),
+        waitDuration: const Duration(milliseconds: 250),
       ),
     );
   }
@@ -250,23 +283,73 @@ class _QRCodetAppState extends State<QRCodetApp> {
     });
     _ui.setRuntimeMessage("");
     try {
-      final bytes = await _previewShot.capture(pixelRatio: 3);
+      final bytes = await _captureCodePngBytes(_payload);
       if (bytes == null) {
         throw Exception('Preview capture failed.');
       }
-      final folder = await _saveDirectory();
       final fileName = '${_selectedUseCase.filenamePrefix}-${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File('${folder.path}/$fileName');
-      await file.writeAsBytes(bytes, flush: true);
+      await saveQrToGallery(bytes, fileName);
+
+      final folder = await _saveDirectory();
+      final localFile = File('${folder.path}/$fileName');
+      await localFile.writeAsBytes(bytes, flush: true);
       if (!mounted) return;
       setState(() {
-        _lastSavedPath = file.path;
+        _lastSavedPath = localFile.path;
       });
-      _ui.setRuntimeMessage('Saved to ${file.path}');
+      _ui.setRuntimeMessage('Saved to gallery (album: QRCodet) and local cache.');
+      _showSaveSuccessNotice(localFile.path, folder.path);
+    } on GalException catch (error) {
+      _ui.setRuntimeMessage('Save failed: ${error.type.message}');
     } catch (error) {
       _ui.setRuntimeMessage('Save failed: $error');
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<Uint8List?> _captureCodePngBytes(String payload) async {
+    try {
+      final liveBytes = await _previewShot.capture(pixelRatio: 3);
+      if (liveBytes != null) return liveBytes;
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+      return ScreenshotController().captureFromWidget(
+        Material(
+          color: Colors.transparent,
+          child: Theme(
+            data: _materialTheme,
+            child: Directionality(
+              textDirection: ui.TextDirection.ltr,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: CodeFrameWidget(
+                    frameId: _frameId,
+                    theme: _activeTheme,
+                    header: _header,
+                    footer: _footer,
+                    metaLine: payload.isEmpty
+                        ? ''
+                        : (_currentValues['pn']?.toString() ??
+                              _currentValues['name']?.toString() ??
+                              _currentValues['url']?.toString() ??
+                              _currentValues['value']?.toString() ??
+                              ''),
+                    child: Container(
+                      color: _activeTheme.light,
+                      padding: const EdgeInsets.all(14),
+                      child: _buildPreviewCode(payload),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        pixelRatio: 3,
+      );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -278,6 +361,86 @@ class _QRCodetAppState extends State<QRCodetApp> {
     await _updateSetting(next);
     if (!mounted) return;
     _ui.setRuntimeMessage('Default save folder changed to ${dir.path}');
+  }
+
+  Future<void> _openSaveFolderAction() async {
+    final dir = await _saveDirectory();
+    if (!mounted) return;
+    _ui.setRuntimeMessage('Active save folder: ${dir.path}');
+    final navigatorContext = _navigatorKey.currentContext;
+    if (navigatorContext == null) return;
+    if (!navigatorContext.mounted) return;
+    await showModalBottomSheet<void>(
+      context: navigatorContext,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Active Save Folder',
+                style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: _appTextColor,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              SelectableText(
+                dir.path,
+                style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                      fontFamily: 'monospace',
+                      color: _appTextColor,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: <Widget>[
+                  FilledButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: dir.path));
+                      if (!mounted) return;
+                      _showSnackBar(const SnackBar(content: Text('Save folder path copied.')));
+                    },
+                    icon: const Icon(Icons.copy_rounded),
+                    label: const Text('Copy Path'),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSaveSuccessNotice(String filePath, String folderPath) {
+    if (!mounted) return;
+    _showSnackBar(
+      SnackBar(
+        content: Text('Saved QR. Folder: $folderPath'),
+        action: SnackBarAction(
+          label: 'Copy',
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: filePath));
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showSnackBar(SnackBar snackBar) {
+    final messenger = _scaffoldMessengerKey.currentState;
+    if (messenger == null) return;
+    messenger.clearSnackBars();
+    messenger.showSnackBar(snackBar);
   }
 
   Future<void> _savePreset() async {
@@ -363,9 +526,6 @@ class _QRCodetAppState extends State<QRCodetApp> {
   Future<void> _handleScan(Barcode barcode) async {
     final rawValue = barcode.rawValue?.trim() ?? '';
     if (rawValue.isEmpty) return;
-    if (_settings.hapticsEnabled) {
-      await HapticFeedback.mediumImpact();
-    }
     final insight = describeScan(rawValue, barcode.format.name);
     final record = ScanRecord(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -395,6 +555,8 @@ class _QRCodetAppState extends State<QRCodetApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'QRCodet',
+        navigatorKey: _navigatorKey,
+        scaffoldMessengerKey: _scaffoldMessengerKey,
         theme: ThemeData.dark(useMaterial3: true),
         home: const Scaffold(body: Center(child: CircularProgressIndicator())),
       );
@@ -403,6 +565,8 @@ class _QRCodetAppState extends State<QRCodetApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'QRCodet',
+      navigatorKey: _navigatorKey,
+      scaffoldMessengerKey: _scaffoldMessengerKey,
       theme: _materialTheme,
       home: Scaffold(
         body: DecoratedBox(
@@ -411,20 +575,21 @@ class _QRCodetAppState extends State<QRCodetApp> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: <Color>[
-                _activeTheme.accent.withValues(alpha: 0.18),
+                _appTheme.accent.withValues(alpha: 0.18),
                 _materialTheme.scaffoldBackgroundColor,
-                _activeTheme.dark.withValues(alpha: 0.08),
+                _appTheme.dark.withValues(alpha: 0.08),
               ],
             ),
           ),
           child: SafeArea(
+            bottom: false,
             child: Column(
               children: <Widget>[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
                   child: AnimatedBuilder(
                     animation: _ui,
-                    builder: (context, _) => _Header(theme: _activeTheme, runtimeMessage: _ui.runtimeMessage),
+                    builder: (context, _) => _Header(theme: _appTheme, runtimeMessage: _ui.runtimeMessage),
                   ),
                 ),
                 Expanded(
@@ -469,6 +634,7 @@ class _QRCodetAppState extends State<QRCodetApp> {
       controllerBuilder: _buildScannerController,
       onDetect: _handleScan,
       onAnalyzeImage: _analyzeImageFromGallery,
+      hapticsEnabled: _settings.hapticsEnabled,
       insight: _scanInsight,
       history: _history,
       dateFormat: _dateFormat,

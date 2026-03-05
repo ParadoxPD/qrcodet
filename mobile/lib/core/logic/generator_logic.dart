@@ -1,18 +1,20 @@
 import 'package:barcode/barcode.dart' as bc;
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:zxing_lib/qrcode.dart';
 
 import '../models/app_models.dart';
 
-int toQrErrorLevel(String level) {
+ErrorCorrectionLevel toQrErrorLevel(String level) {
   switch (level) {
     case 'L':
-      return QrErrorCorrectLevel.L;
+      return ErrorCorrectionLevel.L;
+    case 'M':
+      return ErrorCorrectionLevel.M;
     case 'Q':
-      return QrErrorCorrectLevel.Q;
+      return ErrorCorrectionLevel.Q;
     case 'H':
-      return QrErrorCorrectLevel.H;
+      return ErrorCorrectionLevel.H;
     default:
-      return QrErrorCorrectLevel.M;
+      return ErrorCorrectionLevel.M;
   }
 }
 

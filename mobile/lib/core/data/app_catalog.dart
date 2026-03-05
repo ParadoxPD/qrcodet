@@ -2,17 +2,55 @@ import 'package:flutter/material.dart';
 
 import '../models/app_models.dart';
 
-const Map<String, String> frameLabels = <String, String>{'none': 'None', 'minimal': 'Minimal', 'scan': 'Scan Banner', 'card': 'Card', 'ticket': 'Ticket', 'badge': 'Badge', 'poster': 'Poster'};
-const Map<String, String> qrStyleLabels = <String, String>{'square': 'Square', 'rounded': 'Rounded', 'dot': 'Dot'};
-const Map<String, String> cornerStyleLabels = <String, String>{'square': 'Square', 'rounded': 'Rounded', 'dot': 'Dot'};
+const Map<String, String> frameLabels = <String, String>{
+  'none': 'None',
+  'minimal': 'Minimal',
+  'scan': 'Scan Banner',
+  'card': 'Card',
+  'ticket': 'Ticket',
+  'ornate': 'Ornate',
+  'badge': 'Badge',
+  'poster': 'Poster',
+  'strip': 'Strip',
+};
+const Map<String, String> qrStyleLabels = <String, String>{
+  'square': 'Square',
+  'rounded': 'Rounded',
+  'dot': 'Dot',
+  'diamond': 'Diamond',
+  'squircle': 'Squircle',
+  'kite': 'Kite',
+  'plus': 'Plus',
+  'star': 'Star',
+  'cross': 'Cross',
+  'bars_v': 'Vertical Bars',
+};
+const Map<String, String> cornerStyleLabels = <String, String>{
+  'square': 'Square',
+  'rounded': 'Rounded',
+  'dot': 'Dot',
+  'diamond': 'Diamond',
+  'leaf': 'Leaf',
+};
 
 List<ThemeSpec> buildThemeSpecs() => <ThemeSpec>[
       ThemeSpec(id: 'classic', label: 'Classic Ink', dark: const Color(0xFF161513), light: const Color(0xFFFCFBF8), accent: const Color(0xFFB38728), mood: ThemeMood.light),
+      ThemeSpec(id: 'saffron', label: 'Saffron Poster', dark: const Color(0xFF8C2A10), light: const Color(0xFFFFF7F2), accent: const Color(0xFFE86A2C), mood: ThemeMood.light),
       ThemeSpec(id: 'forest', label: 'Forest Ledger', dark: const Color(0xFF123528), light: const Color(0xFFF4FDF8), accent: const Color(0xFF2D8B67), mood: ThemeMood.light),
       ThemeSpec(id: 'ocean', label: 'Ocean Ticket', dark: const Color(0xFF0E385A), light: const Color(0xFFF0F8FF), accent: const Color(0xFF1D79B8), mood: ThemeMood.light),
       ThemeSpec(id: 'ember', label: 'Ember Paper', dark: const Color(0xFF4B1F12), light: const Color(0xFFFFF7F4), accent: const Color(0xFFD8562D), mood: ThemeMood.light),
+      ThemeSpec(id: 'plum', label: 'Plum Archive', dark: const Color(0xFF3A203A), light: const Color(0xFFFFF6FC), accent: const Color(0xFFAB5BA3), mood: ThemeMood.light),
+      ThemeSpec(id: 'mint', label: 'Mint Label', dark: const Color(0xFF0F3C33), light: const Color(0xFFF3FFFB), accent: const Color(0xFF26B49A), mood: ThemeMood.light),
+      ThemeSpec(id: 'sand', label: 'Sand Ledger', dark: const Color(0xFF5B4128), light: const Color(0xFFFFFAF3), accent: const Color(0xFFD49B4F), mood: ThemeMood.light),
+      ThemeSpec(id: 'slate', label: 'Slate Ledger', dark: const Color(0xFF263640), light: const Color(0xFFF4F8FB), accent: const Color(0xFF5792BC), mood: ThemeMood.light),
+      ThemeSpec(id: 'berry', label: 'Berry Ticket', dark: const Color(0xFF5C1F2F), light: const Color(0xFFFFF6F9), accent: const Color(0xFFD14E79), mood: ThemeMood.light),
       ThemeSpec(id: 'noir', label: 'Noir Label', dark: const Color(0xFFEFEAE1), light: const Color(0xFF121212), accent: const Color(0xFFCCB17B), mood: ThemeMood.dark),
+      ThemeSpec(id: 'carbon', label: 'Carbon', dark: const Color(0xFFF5F5F2), light: const Color(0xFF101112), accent: const Color(0xFF9EA4AF), mood: ThemeMood.dark),
       ThemeSpec(id: 'aurora', label: 'Aurora Night', dark: const Color(0xFFDBFCFF), light: const Color(0xFF101F29), accent: const Color(0xFF41C6D9), mood: ThemeMood.dark),
+      ThemeSpec(id: 'olive-night', label: 'Olive Night', dark: const Color(0xFFF2F7E8), light: const Color(0xFF1D2316), accent: const Color(0xFF9DBD52), mood: ThemeMood.dark),
+      ThemeSpec(id: 'copper-night', label: 'Copper Night', dark: const Color(0xFFFFE9DE), light: const Color(0xFF22140F), accent: const Color(0xFFD57A51), mood: ThemeMood.dark),
+      ThemeSpec(id: 'royal-night', label: 'Royal Night', dark: const Color(0xFFF4F0FF), light: const Color(0xFF1F1638), accent: const Color(0xFF8B66FF), mood: ThemeMood.dark),
+      ThemeSpec(id: 'teal-night', label: 'Teal Night', dark: const Color(0xFFE4FFFB), light: const Color(0xFF112625), accent: const Color(0xFF36C7B6), mood: ThemeMood.dark),
       ThemeSpec(id: 'rose-night', label: 'Rose Night', dark: const Color(0xFFFFEEF3), light: const Color(0xFF28131A), accent: const Color(0xFFDF6688), mood: ThemeMood.dark),
     ];
 

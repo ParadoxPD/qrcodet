@@ -1,42 +1,69 @@
 # QRCodet
 
-QRCodet is now split into two apps:
+<p align="center">
+  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-111827.svg?style=for-the-badge"></a>
+  <img alt="Monorepo" src="https://img.shields.io/badge/Repo-Web%20%2B%20Mobile-0f766e.svg?style=for-the-badge">
+  <img alt="Web: React + Vite" src="https://img.shields.io/badge/Web-React%20%2B%20Vite-2563eb.svg?style=for-the-badge">
+  <img alt="Mobile: Flutter" src="https://img.shields.io/badge/Mobile-Flutter-0ea5e9.svg?style=for-the-badge">
+</p>
 
-- `web/`: the React + Vite web studio
-- `mobile/`: the Flutter mobile app
+QRCodet is a QR/Barcode studio with two clients:
 
-Both targets support QR and barcode generation, themed previews, reusable presets, and scanning workflows.
+- `web/`: React + Vite app for desktop and mobile browsers
+- `mobile/`: Flutter app for Android/iOS
 
-## Repo Layout
+Both apps support code generation, scanning, themed styling, and saved history workflows.
+
+## Highlights
+
+- QR + Barcode generation for multiple payload types
+- Real-time camera scanning + image upload scanning
+- Parsed scan insights: code type, fields, decoded payload, useful metadata
+- Themed code frames and styling controls
+- Save generated images locally
+- Scan history with configurable limits
+- Settings for theme, scanner behavior, storage folder, and UX preferences
+
+## Repository Structure
 
 ```text
 .
-├── web/
-│   ├── src/
+├── web/                 # React + Vite application
 │   ├── public/
+│   ├── src/
 │   └── package.json
-├── mobile/
-│   ├── lib/
+├── mobile/              # Flutter application
 │   ├── android/
 │   ├── ios/
+│   ├── lib/
 │   └── pubspec.yaml
 ├── DESIGN_STYLE.md
 └── README.md
 ```
 
-## Web App
+## Requirements
 
-Features:
+### Web
 
-- QR and barcode generation across all existing use cases
-- Responsive mobile browser layout
-- Collapsible use-case selection and field-reference panels for small screens
-- Realtime QR/barcode scanning from camera
-- QR/barcode image upload decoding
-- Parsed scan details: code type, structured fields, and payload metadata
-- PNG/SVG export and local preset storage
+- Node.js 18+
+- npm 9+
 
-Run locally:
+### Mobile
+
+- Flutter SDK (stable)
+- Android Studio / Xcode (platform-specific)
+- A physical device or emulator/simulator
+
+## Quick Start
+
+### 1) Clone
+
+```bash
+git clone <your-repo-url>
+cd QRCodet
+```
+
+### 2) Run Web App
 
 ```bash
 cd web
@@ -44,47 +71,83 @@ npm install
 npm run dev
 ```
 
-Build:
+Build for production:
 
 ```bash
-cd web
 npm run build
+npm run preview
 ```
 
-## Mobile App
-
-Features:
-
-- Flutter implementation of the generator studio
-- QR and barcode creation with themed framed previews
-- Realtime QR/barcode scanning with camera switching and torch control
-- Image-based scan analysis from local gallery
-- Local save-to-storage workflow with a dedicated `QRCodetGallery` folder
-- In-app gallery of generated codes
-- Settings for app theme, generator defaults, camera scan behavior, save folder, and scan-history limit
-- Persistent scan history with configurable cap
-
-Run locally:
+### 3) Run Mobile App
 
 ```bash
 cd mobile
+flutter pub get
 flutter run
 ```
 
-Validate/build:
+Validate and build:
 
 ```bash
-cd mobile
 flutter analyze
 flutter build apk --debug
 ```
 
-## Notes
+## Web App Details (`web/`)
 
-- iOS usage descriptions for camera and photo access are configured in `mobile/ios/Runner/Info.plist`.
-- Android camera permission is configured in `mobile/android/app/src/main/AndroidManifest.xml`.
-- The web scanner uses ZXing via `@zxing/browser`.
+- Generator with QR + barcode use-cases
+- Responsive layout improvements for small screens
+- Dedicated scanner tab
+- Camera scanner + image upload scanner
+- PNG/SVG export
+- Local presets and browser storage persistence
+
+Main commands:
+
+```bash
+npm run dev
+npm run build
+npm run preview
+```
+
+## Mobile App Details (`mobile/`)
+
+- Flutter implementation of the same studio workflow
+- Create / Scan / Gallery / Settings sections
+- Real-time scan (camera), torch, camera switch
+- Image upload scan
+- Save to device storage (default gallery folder)
+- In-app history + storage controls
+
+Main commands:
+
+```bash
+flutter pub get
+flutter run
+flutter analyze
+flutter build apk --debug
+```
+
+## Permissions & Storage Notes
+
+- Camera permission is required for live scanning.
+- Media/storage permissions are requested at runtime when needed.
+- Android/iOS metadata is configured in:
+  - `mobile/android/app/src/main/AndroidManifest.xml`
+  - `mobile/ios/Runner/Info.plist`
+
+## Troubleshooting
+
+- `flutter analyze` issues: run `flutter pub get` and re-run.
+- Camera not opening: check OS-level camera permission.
+- Save path issues on Android: verify storage permission is granted for the app.
+- Web scanner not reading: confirm browser camera access and HTTPS/localhost context.
+
+## Tech Stack
+
+- Web: React, Vite, ZXing (`@zxing/browser`), QR/Barcode rendering libraries
+- Mobile: Flutter, `mobile_scanner`, `qr_flutter`, `barcode_widget`, `shared_preferences`
 
 ## License
 
-See [LICENSE](./LICENSE).
+This project is licensed under the MIT License. See [LICENSE](./LICENSE).

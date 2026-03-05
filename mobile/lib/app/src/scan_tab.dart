@@ -5,6 +5,7 @@ class _ScannerTab extends StatefulWidget {
     required this.controllerBuilder,
     required this.onDetect,
     required this.onAnalyzeImage,
+    required this.hapticsEnabled,
     required this.insight,
     required this.history,
     required this.dateFormat,
@@ -14,6 +15,7 @@ class _ScannerTab extends StatefulWidget {
   final MobileScannerController Function() controllerBuilder;
   final Future<void> Function(Barcode barcode) onDetect;
   final Future<void> Function() onAnalyzeImage;
+  final bool hapticsEnabled;
   final ScanInsight? insight;
   final List<ScanRecord> history;
   final DateFormat dateFormat;
@@ -77,6 +79,9 @@ class _ScannerTabState extends State<_ScannerTab> {
       _scannerPaused = true;
     });
     try {
+      if (widget.hapticsEnabled) {
+        await HapticFeedback.vibrate();
+      }
       await _controller.stop();
       await widget.onDetect(first);
     } finally {

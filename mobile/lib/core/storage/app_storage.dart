@@ -1,6 +1,35 @@
 import 'dart:io';
 
+import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
+
+Future<String> saveQrToGallery(List<int> bytes, String filename) async {
+  final tmp = await getTemporaryDirectory();
+  final tmpFile = File('${tmp.path}/$filename');
+  await tmpFile.writeAsBytes(bytes, flush: true);
+
+  final hasAccess = await Gal.hasAccess(toAlbum: true);
+  if (!hasAccess) {
+    final granted = await Gal.requestAccess(toAlbum: true);
+    if (!granted) {
+      throw Exception('Gallery permission denied');
+    }
+  }
+
+  await Gal.putImage(tmpFile.path, album: 'QRCodet');
+  final path = tmpFile.path;
+  await tmpFile.delete();
+  return path;
+}
+
+Future<Directory> resolveAppCacheDirectory() async {
+  final base = await getApplicationDocumentsDirectory();
+  final folder = Directory('${base.path}/QRCodetGallery');
+  if (!await folder.exists()) {
+    await folder.create(recursive: true);
+  }
+  return folder;
+}
 
 Future<Directory> resolveSaveDirectory(String? customRoot) async {
   if (customRoot != null && customRoot.isNotEmpty) {
@@ -10,28 +39,17 @@ Future<Directory> resolveSaveDirectory(String? customRoot) async {
     }
     return custom;
   }
-  final Directory? external = Platform.isAndroid ? await getExternalStorageDirectory() : null;
-  if (Platform.isAndroid && external != null) {
-    final String currentPath = external.path;
-    const marker = '/Android/data/';
-    final markerIndex = currentPath.indexOf(marker);
-    if (markerIndex != -1) {
-      final String targetRoot = currentPath.substring(0, markerIndex + marker.length);
-      final Directory preferred = Directory('${targetRoot}com.paradox.qrcodet/files/QRCodetGallery');
-      try {
-        if (!await preferred.exists()) {
-          await preferred.create(recursive: true);
-        }
-        return preferred;
-      } catch (_) {
-        // Fall through to app-specific default path.
+  if (Platform.isAndroid) {
+    final dcimFolder = Directory('/storage/emulated/0/DCIM/QRCodetGallery');
+    try {
+      if (!await dcimFolder.exists()) {
+        await dcimFolder.create(recursive: true);
       }
+      return dcimFolder;
+    } catch (_) {
+      // Scoped-storage/device restrictions can block direct shared-path writes.
+      // Fall back to app-local storage so save flow remains functional.
     }
   }
-  final Directory base = external ?? await getApplicationDocumentsDirectory();
-  final Directory folder = Directory('${base.path}/QRCodetGallery');
-  if (!await folder.exists()) {
-    await folder.create(recursive: true);
-  }
-  return folder;
+  return resolveAppCacheDirectory();
 }
