@@ -1,7 +1,26 @@
-part of '../../qrcodet_app.dart';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
-extension _CreateTabSection on _QRCodetAppState {
-  Widget _buildCreateTab() {
+import 'package:barcode_widget/barcode_widget.dart' hide Barcode;
+import 'package:custom_qr_generator/custom_qr_generator.dart';
+import 'package:flutter/material.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:zxing_lib/qrcode.dart';
+
+import '../../../../core/data/app_catalog.dart';
+import '../../../../core/logic/generator_logic.dart';
+import '../../../../core/models/app_models.dart';
+import '../../../providers/qrcodet_provider.dart';
+import '../../../views/widgets/app_widgets.dart';
+
+class CreateTabView extends StatelessWidget {
+  const CreateTabView({super.key, required this.vm});
+
+  final CreateProvider vm;
+
+  @override
+  Widget build(BuildContext context) {
     final payload = _payload;
     final error = _payloadError;
     final useCases = _mode == CodeMode.qr ? _qrUseCases : _barcodeUseCases;
@@ -19,17 +38,21 @@ extension _CreateTabSection on _QRCodetAppState {
         ? Colors.white
         : Colors.black;
 
-    return ListView(
-      physics: _smoothScroll,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-      children: <Widget>[
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: ListView(
+        physics: _smoothScroll,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+        children: <Widget>[
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _SectionTitle(
+                const AppSectionTitle(
                   kicker: 'Mode',
                   title: 'Choose your code type',
                 ),
@@ -108,7 +131,7 @@ extension _CreateTabSection on _QRCodetAppState {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _SectionTitle(
+                const AppSectionTitle(
                   kicker: 'Data',
                   title: 'Fill the payload fields',
                 ),
@@ -143,7 +166,7 @@ extension _CreateTabSection on _QRCodetAppState {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _SectionTitle(
+                const AppSectionTitle(
                   kicker: 'Style',
                   title: 'Tune the frame and theme',
                 ),
@@ -276,7 +299,7 @@ extension _CreateTabSection on _QRCodetAppState {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _SectionTitle(
+                const AppSectionTitle(
                   kicker: 'Preview',
                   title: 'Live preview and export',
                 ),
@@ -307,17 +330,22 @@ extension _CreateTabSection on _QRCodetAppState {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: <Widget>[
-                    FilledButton.icon(
-                      onPressed: _saving ? null : _saveGeneratedCode,
-                      icon: const Icon(Icons.download_rounded),
-                      label: Text(_saving ? 'Saving...' : 'Save PNG'),
-                    ),
-                  ],
-                ),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: <Widget>[
+                      FilledButton.icon(
+                        onPressed: (_saving || _sharing) ? null : _saveGeneratedCode,
+                        icon: const Icon(Icons.download_rounded),
+                        label: Text(_saving ? 'Saving...' : 'Save PNG'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: (_saving || _sharing) ? null : _shareGeneratedCode,
+                        icon: const Icon(Icons.share_rounded),
+                        label: Text(_sharing ? 'Sharing...' : 'Share PNG'),
+                      ),
+                    ],
+                  ),
                 if (_lastSavedPath.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 12),
                   Text(
@@ -362,7 +390,7 @@ extension _CreateTabSection on _QRCodetAppState {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _SectionTitle(
+                const AppSectionTitle(
                   kicker: 'Presets',
                   title: 'Reusable mobile presets',
                 ),
@@ -417,8 +445,104 @@ extension _CreateTabSection on _QRCodetAppState {
             ),
           ),
         ),
-      ],
+        ],
+      ),
     );
+  }
+
+  CreateProvider get _ui => vm;
+  CodeMode get _mode => vm.mode;
+  set _mode(CodeMode value) => vm.mode = value;
+  List<UseCaseSpec> get _qrUseCases => vm.qrUseCases;
+  List<UseCaseSpec> get _barcodeUseCases => vm.barcodeUseCases;
+  Map<String, dynamic> get _currentValues => vm.currentValues;
+  UseCaseSpec get _selectedUseCase => vm.selectedUseCase;
+  ThemeData get _materialTheme => vm.materialTheme;
+  ThemeSpec get _activeTheme => vm.activeTheme;
+  List<ThemeSpec> get _themes => vm.themes;
+  String get _payload => vm.payload;
+  String get _payloadError => vm.payloadError;
+  String get _header => vm.header;
+  set _header(String value) => vm.header = value;
+  String get _footer => vm.footer;
+  set _footer(String value) => vm.footer = value;
+  String get _generatorThemeId => vm.generatorThemeId;
+  set _generatorThemeId(String value) => vm.generatorThemeId = value;
+  String get _frameId => vm.frameId;
+  set _frameId(String value) => vm.frameId = value;
+  String get _qrStyleId => vm.qrStyleId;
+  set _qrStyleId(String value) => vm.qrStyleId = value;
+  String get _cornerStyleId => vm.cornerStyleId;
+  set _cornerStyleId(String value) => vm.cornerStyleId = value;
+  String get _qrErrorLevel => vm.qrErrorLevel;
+  set _qrErrorLevel(String value) => vm.qrErrorLevel = value;
+  bool get _saving => vm.saving;
+  bool get _sharing => vm.sharing;
+  String get _lastSavedPath => vm.lastSavedPath;
+  set _presetName(String value) => vm.presetName = value;
+  List<GeneratorPreset> get _presets => vm.presets;
+  ScrollPhysics get _smoothScroll => vm.smoothScroll;
+  ScreenshotController get _previewShot => vm.previewShot;
+
+  void _runSetState(VoidCallback updates) => vm.runSetState(updates);
+  void _setUseCase(String id) => vm.setUseCase(id);
+  void _setField(String fieldName, dynamic value) => vm.setField(fieldName, value);
+  FocusNode _focusNodeForField(String fieldName) => vm.focusNodeForField(fieldName);
+  Future<void> _savePreset() => vm.savePreset();
+  Future<void> _loadPreset(GeneratorPreset preset) => vm.loadPreset(preset);
+  Future<void> _deletePreset(String id) => vm.deletePreset(id);
+
+  Future<void> _saveGeneratedCode() async {
+    await vm.saveGeneratedCode(captureBytes: () => _captureCodePngBytes(_payload));
+  }
+
+  Future<void> _shareGeneratedCode() async {
+    await vm.shareGeneratedCode(captureBytes: () => _captureCodePngBytes(_payload));
+  }
+
+  Future<Uint8List?> _captureCodePngBytes(String payload) async {
+    try {
+      final liveBytes = await vm.previewShot.capture(pixelRatio: 3);
+      if (liveBytes != null) return liveBytes;
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+      return ScreenshotController().captureFromWidget(
+        Material(
+          color: Colors.transparent,
+          child: Theme(
+            data: _materialTheme,
+            child: Directionality(
+              textDirection: ui.TextDirection.ltr,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: CodeFrameWidget(
+                    frameId: _frameId,
+                    theme: _activeTheme,
+                    header: _header,
+                    footer: _footer,
+                    metaLine: payload.isEmpty
+                        ? ''
+                        : (_currentValues['pn']?.toString() ??
+                              _currentValues['name']?.toString() ??
+                              _currentValues['url']?.toString() ??
+                              _currentValues['value']?.toString() ??
+                              ''),
+                    child: Container(
+                      color: _activeTheme.light,
+                      padding: const EdgeInsets.all(14),
+                      child: _buildPreviewCode(payload),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        pixelRatio: 3,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildField(FieldSpec field, dynamic value) {
@@ -458,6 +582,7 @@ extension _CreateTabSection on _QRCodetAppState {
         );
       default:
         return TextFormField(
+          focusNode: _focusNodeForField(field.name),
           initialValue: current?.toString() ?? '',
           keyboardType: field.kind == FieldKind.number
               ? const TextInputType.numberWithOptions(decimal: true)

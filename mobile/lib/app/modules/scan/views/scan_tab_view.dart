@@ -1,7 +1,15 @@
-part of '../qrcodet_app.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
-class _ScannerTab extends StatefulWidget {
-  const _ScannerTab({
+import '../../../../core/models/app_models.dart';
+import '../../../views/widgets/app_widgets.dart';
+
+class ScanTabView extends StatefulWidget {
+  const ScanTabView({
+    super.key,
     required this.controllerBuilder,
     required this.onDetect,
     required this.onAnalyzeImage,
@@ -22,10 +30,10 @@ class _ScannerTab extends StatefulWidget {
   final ValueChanged<ScanRecord> onRestoreHistory;
 
   @override
-  State<_ScannerTab> createState() => _ScannerTabState();
+  State<ScanTabView> createState() => _ScanTabViewState();
 }
 
-class _ScannerTabState extends State<_ScannerTab> {
+class _ScanTabViewState extends State<ScanTabView> {
   late MobileScannerController _controller;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _resultSectionKey = GlobalKey();
@@ -33,6 +41,16 @@ class _ScannerTabState extends State<_ScannerTab> {
   bool _handling = false;
   bool _torchOn = false;
   bool _scannerPaused = false;
+
+  ScrollPhysics get _scrollPhysics {
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+      default:
+        return const ClampingScrollPhysics();
+    }
+  }
 
   @override
   void initState() {
@@ -50,7 +68,7 @@ class _ScannerTabState extends State<_ScannerTab> {
   }
 
   @override
-  void didUpdateWidget(covariant _ScannerTab oldWidget) {
+  void didUpdateWidget(covariant ScanTabView oldWidget) {
     super.didUpdateWidget(oldWidget);
     final oldPayload = oldWidget.insight?.payload ?? '';
     final nextPayload = widget.insight?.payload ?? '';
@@ -125,7 +143,7 @@ class _ScannerTabState extends State<_ScannerTab> {
     final insight = widget.insight;
     return ListView(
       controller: _scrollController,
-      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      physics: _scrollPhysics,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       children: <Widget>[
         Card(
@@ -134,7 +152,7 @@ class _ScannerTabState extends State<_ScannerTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _SectionTitle(kicker: 'Realtime', title: 'Scan from the camera or an image'),
+                const AppSectionTitle(kicker: 'Realtime', title: 'Scan from the camera or an image'),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
@@ -199,11 +217,11 @@ class _ScannerTabState extends State<_ScannerTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const _SectionTitle(kicker: 'Result', title: 'Detected type, fields, and payload'),
+                  const AppSectionTitle(kicker: 'Result', title: 'Detected type, fields, and payload'),
                   const SizedBox(height: 12),
-                  _InfoTile(label: 'Detected type', value: insight?.typeLabel ?? 'Nothing scanned yet.'),
+                  AppInfoTile(label: 'Detected type', value: insight?.typeLabel ?? 'Nothing scanned yet.'),
                   const SizedBox(height: 8),
-                  _InfoTile(label: 'Summary', value: insight?.title ?? 'Awaiting a scan'),
+                  AppInfoTile(label: 'Summary', value: insight?.title ?? 'Awaiting a scan'),
                   const SizedBox(height: 12),
                   Text('Fields', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
@@ -212,29 +230,24 @@ class _ScannerTabState extends State<_ScannerTab> {
                   else
                     ...insight.fields.map((item) => Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: _InfoTile(label: item.label, value: item.value),
+                          child: AppInfoTile(label: item.label, value: item.value),
                         )),
                   const SizedBox(height: 12),
                   Text('Useful info', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
                   if (insight == null)
-                    const Text('No scan info yet.')
+                    const Text('Scan a code to view context-aware hints.')
                   else
                     ...insight.usefulInfo.map((item) => Padding(
                           padding: const EdgeInsets.only(bottom: 8),
-                          child: _InfoTile(label: item.label, value: item.value),
+                          child: AppInfoTile(label: item.label, value: item.value),
                         )),
                   const SizedBox(height: 12),
-                  Text('Decoded payload', style: Theme.of(context).textTheme.titleSmall),
+                  Text('Raw payload', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: SelectableText(insight?.payload ?? 'Nothing decoded yet.', style: const TextStyle(fontFamily: 'monospace')),
+                  SelectableText(
+                    insight?.payload ?? '—',
+                    style: const TextStyle(fontFamily: 'monospace'),
                   ),
                 ],
               ),
@@ -248,17 +261,22 @@ class _ScannerTabState extends State<_ScannerTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const _SectionTitle(kicker: 'History', title: 'Recent scans on this device'),
+                AppSectionTitle(kicker: 'History', title: 'Recent scans (${widget.history.length})'),
                 const SizedBox(height: 12),
                 if (widget.history.isEmpty)
-                  const Text('Scan history is empty.')
+                  const Text('No scans yet.')
                 else
-                  ...widget.history.map((record) => ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(record.title),
-                        subtitle: Text('${record.codeType} • ${widget.dateFormat.format(DateTime.fromMillisecondsSinceEpoch(record.scannedAt))}'),
-                        onTap: () => widget.onRestoreHistory(record),
-                      )),
+                  ...widget.history.take(20).map(
+                        (record) => ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(record.title),
+                          subtitle: Text('${record.codeType} • ${widget.dateFormat.format(DateTime.fromMillisecondsSinceEpoch(record.scannedAt))}'),
+                          trailing: IconButton(
+                            onPressed: () => widget.onRestoreHistory(record),
+                            icon: const Icon(Icons.history_rounded),
+                          ),
+                        ),
+                      ),
               ],
             ),
           ),

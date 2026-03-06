@@ -1,9 +1,19 @@
-part of '../../qrcodet_app.dart';
+import 'dart:io';
 
-extension _GalleryTabSection on _QRCodetAppState {
-  Widget _buildGalleryTab() {
+import 'package:flutter/material.dart';
+
+import '../../../providers/qrcodet_provider.dart';
+import '../../../views/widgets/app_widgets.dart';
+
+class GalleryTabView extends StatelessWidget {
+  const GalleryTabView({super.key, required this.vm});
+
+  final GalleryProvider vm;
+
+  @override
+  Widget build(BuildContext context) {
     return FutureBuilder<List<FileSystemEntity>>(
-      future: _saveDirectory().then((dir) async {
+      future: vm.saveDirectory().then((dir) async {
         if (!await dir.exists()) return <FileSystemEntity>[];
         final items = dir
             .listSync()
@@ -15,7 +25,7 @@ extension _GalleryTabSection on _QRCodetAppState {
       builder: (context, snapshot) {
         final items = snapshot.data ?? <FileSystemEntity>[];
         return ListView(
-          physics: _smoothScroll,
+          physics: vm.smoothScroll,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
           children: <Widget>[
             Card(
@@ -24,9 +34,9 @@ extension _GalleryTabSection on _QRCodetAppState {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const _SectionTitle(kicker: 'Gallery', title: 'Saved codes on this device'),
+                    const AppSectionTitle(kicker: 'Gallery', title: 'Saved codes on this device'),
                     const SizedBox(height: 6),
-                    Text(_settings.saveDirectoryPath, style: Theme.of(context).textTheme.bodySmall),
+                    Text(vm.settings.saveDirectoryPath, style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height: 12),
                     if (items.isEmpty)
                       const Text('No saved QR or barcode images yet.')
@@ -43,12 +53,12 @@ extension _GalleryTabSection on _QRCodetAppState {
                               child: Image.file(file, width: 56, height: 56, fit: BoxFit.cover),
                             ),
                             title: Text(file.uri.pathSegments.last),
-                            subtitle: Text('Modified ${_dateFormat.format(stat.modified)}'),
+                            subtitle: Text('Modified ${vm.dateFormat.format(stat.modified)}'),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_outline),
                               onPressed: () async {
                                 await file.delete();
-                                _runSetState(() {});
+                                vm.runSetState(() {});
                               },
                             ),
                           ),
