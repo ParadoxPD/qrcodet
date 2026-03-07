@@ -7,9 +7,13 @@ import '../../core/models/app_models.dart';
 class ScanService {
   MobileScannerController buildScannerController(AppSettings settings) {
     return MobileScannerController(
-      autoStart: true,
-      facing: settings.preferFrontCamera ? CameraFacing.front : CameraFacing.back,
-      detectionSpeed: settings.focusProfile == 'fast' ? DetectionSpeed.unrestricted : DetectionSpeed.normal,
+      autoStart: false,
+      facing: settings.preferFrontCamera
+          ? CameraFacing.front
+          : CameraFacing.back,
+      detectionSpeed: settings.focusProfile == 'fast'
+          ? DetectionSpeed.unrestricted
+          : DetectionSpeed.normal,
       autoZoom: settings.autoZoom,
       formats: const <BarcodeFormat>[],
       torchEnabled: false,
@@ -19,14 +23,20 @@ class ScanService {
 
   Future<Barcode?> analyzeImageFromGallery({
     required ImagePicker imagePicker,
-    required MobileScannerController Function() controllerBuilder,
   }) async {
     final file = await imagePicker.pickImage(source: ImageSource.gallery);
     if (file == null) return null;
-    final controller = controllerBuilder();
+    final controller = MobileScannerController(
+      autoStart: false,
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      formats: const <BarcodeFormat>[],
+      torchEnabled: false,
+    );
     try {
       final capture = await controller.analyzeImage(file.path);
-      return capture?.barcodes.isNotEmpty == true ? capture!.barcodes.first : null;
+      return capture?.barcodes.isNotEmpty == true
+          ? capture!.barcodes.first
+          : null;
     } finally {
       controller.dispose();
     }
@@ -39,16 +49,18 @@ class ScanService {
   }) {
     final rawValue = barcode.rawValue?.trim() ?? '';
     final insight = describeScan(rawValue, barcode.format.name);
+    final now = DateTime.now();
     final record = ScanRecord(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      id: now.microsecondsSinceEpoch.toString(),
       rawValue: rawValue,
       codeType: insight.typeLabel,
       title: insight.title,
-      scannedAt: DateTime.now().millisecondsSinceEpoch,
+      scannedAt: now.millisecondsSinceEpoch,
     );
-    final nextHistory = <ScanRecord>[record, ...currentHistory.where((item) => item.rawValue != rawValue)]
-        .take(historyLimit)
-        .toList();
+    final nextHistory = <ScanRecord>[
+      record,
+      ...currentHistory.where((item) => item.rawValue != rawValue),
+    ].take(historyLimit).toList();
     return (insight, nextHistory);
   }
 }

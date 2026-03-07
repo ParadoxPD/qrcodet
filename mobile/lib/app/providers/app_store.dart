@@ -4,10 +4,14 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/data/app_catalog.dart';
 import '../../core/logic/generator_logic.dart';
@@ -20,7 +24,11 @@ import '../services/scan_service.dart';
 import '../services/settings_service.dart';
 
 class AppUiState {
-  AppUiState({this.loading = true, this.tabIndex = 0, this.runtimeMessage = ''});
+  AppUiState({
+    this.loading = true,
+    this.tabIndex = 0,
+    this.runtimeMessage = '',
+  });
 
   bool loading;
   int tabIndex;
@@ -33,18 +41,19 @@ class AppStore extends ChangeNotifier {
     CreateService? createService,
     ScanService? scanService,
     SettingsService? settingsService,
-  })  : _persistenceService = persistenceService ?? AppPersistenceService(),
-        _createService = createService ?? CreateService(),
-        _scanService = scanService ?? ScanService(),
-        _settingsService = settingsService ?? SettingsService() {
-    valuesMap = createInitialValues(qrUseCases, barcodeUseCases);
+  }) : _persistenceService = persistenceService ?? AppPersistenceService(),
+       _createService = createService ?? CreateService(),
+       _scanService = scanService ?? ScanService(),
+       _settingsService = settingsService ?? SettingsService() {
+    _valuesMap = createInitialValues(qrUseCases, barcodeUseCases);
   }
 
   final AppPersistenceService _persistenceService;
   final CreateService _createService;
   final ScanService _scanService;
   final SettingsService _settingsService;
-  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
   final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   final ScreenshotController previewShot = ScreenshotController();
   final ImagePicker _imagePicker = ImagePicker();
@@ -55,36 +64,67 @@ class AppStore extends ChangeNotifier {
   final List<UseCaseSpec> qrUseCases = buildQrUseCases();
   final List<UseCaseSpec> barcodeUseCases = buildBarcodeUseCases();
 
-  final AppUiState ui = AppUiState();
-  AppSettings settings = AppSettings.defaults();
-  List<ScanRecord> history = <ScanRecord>[];
-  List<GeneratorPreset> presets = <GeneratorPreset>[];
-  CodeMode mode = CodeMode.qr;
-  String selectedQrId = 'upi';
-  String selectedBarcodeId = 'code128';
-  Map<String, Map<String, dynamic>> valuesMap = <String, Map<String, dynamic>>{};
-  String header = 'Scan & Pay';
-  String footer = 'Powered by QRCodet';
-  String generatorThemeId = 'noir';
-  String frameId = 'scan';
-  String qrStyleId = 'rounded';
-  String cornerStyleId = 'rounded';
-  String qrErrorLevel = 'M';
-  String lastSavedPath = '';
-  String presetName = '';
-  ScanInsight? scanInsight;
-  bool saving = false;
-  bool sharing = false;
+  final AppUiState _ui = AppUiState();
+  AppSettings _settings = AppSettings.defaults();
+  List<ScanRecord> _history = <ScanRecord>[];
+  List<GeneratorPreset> _presets = <GeneratorPreset>[];
+  CodeMode _mode = CodeMode.qr;
+  String _selectedQrId = 'upi';
+  String _selectedBarcodeId = 'code128';
+  Map<String, Map<String, dynamic>> _valuesMap =
+      <String, Map<String, dynamic>>{};
+  String _header = 'Scan & Pay';
+  String _footer = 'Powered by QRCodet';
+  String _generatorThemeId = 'noir';
+  String _frameId = 'scan';
+  String _qrStyleId = 'rounded';
+  String _cornerStyleId = 'rounded';
+  String _qrErrorLevel = 'M';
+  String _lastSavedPath = '';
+  String _presetName = '';
+  ScanInsight? _scanInsight;
+  bool _saving = false;
+  bool _sharing = false;
+  int _galleryVersion = 0;
+  ThemeData? _cachedMaterialTheme;
+  String? _cachedMaterialThemeId;
+  PayloadResult? _cachedPayloadResult;
+  String? _cachedPayloadKey;
+
+  AppUiState get ui => _ui;
+  AppSettings get settings => _settings;
+  List<ScanRecord> get history => _history;
+  List<GeneratorPreset> get presets => _presets;
+  CodeMode get mode => _mode;
+  String get selectedQrId => _selectedQrId;
+  String get selectedBarcodeId => _selectedBarcodeId;
+  String get header => _header;
+  String get footer => _footer;
+  String get generatorThemeId => _generatorThemeId;
+  String get frameId => _frameId;
+  String get qrStyleId => _qrStyleId;
+  String get cornerStyleId => _cornerStyleId;
+  String get qrErrorLevel => _qrErrorLevel;
+  String get lastSavedPath => _lastSavedPath;
+  String get presetName => _presetName;
+  ScanInsight? get scanInsight => _scanInsight;
+  bool get saving => _saving;
+  bool get sharing => _sharing;
+  int get galleryVersion => _galleryVersion;
 
   bool _disposed = false;
+  static const ScrollPhysics _iosScroll = BouncingScrollPhysics(
+    parent: AlwaysScrollableScrollPhysics(),
+  );
+  static const ScrollPhysics _defaultScroll = ClampingScrollPhysics();
 
   ScrollPhysics get smoothScroll {
     switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
-        return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+        return _iosScroll;
       default:
-        return const ClampingScrollPhysics();
+        return _defaultScroll;
     }
   }
 
@@ -94,33 +134,64 @@ class AppStore extends ChangeNotifier {
     return source.firstWhere((item) => item.id == selectedId);
   }
 
-  ThemeSpec get activeTheme => themes.firstWhere((item) => item.id == generatorThemeId, orElse: () => themes.first);
-  ThemeSpec get appTheme => themes.firstWhere((item) => item.id == settings.appThemeId, orElse: () => themes.first);
+  ThemeSpec get activeTheme => themes.firstWhere(
+    (item) => item.id == generatorThemeId,
+    orElse: () => themes.first,
+  );
+  ThemeSpec get appTheme => themes.firstWhere(
+    (item) => item.id == settings.appThemeId,
+    orElse: () => themes.first,
+  );
 
-  ThemeData get materialTheme {
-    final spec = themes.firstWhere((item) => item.id == settings.appThemeId, orElse: () => themes.first);
-    final brightness = spec.mood == ThemeMood.dark ? Brightness.dark : Brightness.light;
-    final scheme = ColorScheme.fromSeed(seedColor: spec.accent, brightness: brightness).copyWith(
-      primary: spec.accent,
-      secondary: spec.dark,
-      surface: spec.light,
-      onSurface: brightness == Brightness.dark ? Colors.white : Colors.black,
-      onSurfaceVariant: brightness == Brightness.dark ? Colors.white : Colors.black,
+  ThemeData _buildMaterialTheme() {
+    final spec = themes.firstWhere(
+      (item) => item.id == settings.appThemeId,
+      orElse: () => themes.first,
     );
-    final textColor = brightness == Brightness.dark ? Colors.white : Colors.black;
-    final baseFill = brightness == Brightness.dark ? const Color(0xFF1A1712) : Colors.white;
+    final brightness = spec.mood == ThemeMood.dark
+        ? Brightness.dark
+        : Brightness.light;
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: spec.accent,
+          brightness: brightness,
+        ).copyWith(
+          primary: spec.accent,
+          secondary: spec.dark,
+          surface: spec.light,
+          onSurface: brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
+          onSurfaceVariant: brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black,
+        );
+    final textColor = brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black;
+    final baseFill = brightness == Brightness.dark
+        ? const Color(0xFF1A1712)
+        : Colors.white;
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      canvasColor: brightness == Brightness.dark ? const Color(0xFF1A1712) : Colors.white,
-      scaffoldBackgroundColor: brightness == Brightness.dark ? const Color(0xFF0E0D0A) : const Color(0xFFF5F1E7),
+      canvasColor: brightness == Brightness.dark
+          ? const Color(0xFF1A1712)
+          : Colors.white,
+      scaffoldBackgroundColor: brightness == Brightness.dark
+          ? const Color(0xFF0E0D0A)
+          : const Color(0xFFF5F1E7),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: brightness == Brightness.dark ? const Color(0xFF171510) : Colors.white,
+        color: brightness == Brightness.dark
+            ? const Color(0xFF171510)
+            : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       ),
-      textTheme: ThemeData(brightness: brightness).textTheme.apply(bodyColor: textColor, displayColor: textColor),
+      textTheme: ThemeData(
+        brightness: brightness,
+      ).textTheme.apply(bodyColor: textColor, displayColor: textColor),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: baseFill,
@@ -128,28 +199,42 @@ class AppStore extends ChangeNotifier {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: brightness == Brightness.dark ? const Color(0xFF322B20) : const Color(0xFFDFD7C9),
+            color: brightness == Brightness.dark
+                ? const Color(0xFF322B20)
+                : const Color(0xFFDFD7C9),
           ),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        indicatorColor: spec.accent.withValues(alpha: brightness == Brightness.dark ? 0.28 : 0.2),
-        backgroundColor: brightness == Brightness.dark ? const Color(0xFF14110D) : const Color(0xFFF8F4EA),
+        indicatorColor: spec.accent.withValues(
+          alpha: brightness == Brightness.dark ? 0.28 : 0.2,
+        ),
+        backgroundColor: brightness == Brightness.dark
+            ? const Color(0xFF14110D)
+            : const Color(0xFFF8F4EA),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: brightness == Brightness.dark ? const Color(0xFF1A1712) : Colors.white,
+        backgroundColor: brightness == Brightness.dark
+            ? const Color(0xFF1A1712)
+            : Colors.white,
       ),
       popupMenuTheme: PopupMenuThemeData(
-        color: brightness == Brightness.dark ? const Color(0xFF1A1712) : Colors.white,
+        color: brightness == Brightness.dark
+            ? const Color(0xFF1A1712)
+            : Colors.white,
         textStyle: TextStyle(color: textColor),
       ),
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
-          color: brightness == Brightness.dark ? const Color(0xFFF0EAD9) : const Color(0xFF1B1812),
+          color: brightness == Brightness.dark
+              ? const Color(0xFFF0EAD9)
+              : const Color(0xFF1B1812),
           borderRadius: BorderRadius.circular(10),
         ),
         textStyle: TextStyle(
-          color: brightness == Brightness.dark ? const Color(0xFF1B1812) : const Color(0xFFF0EAD9),
+          color: brightness == Brightness.dark
+              ? const Color(0xFF1B1812)
+              : const Color(0xFFF0EAD9),
           fontSize: 12,
         ),
         waitDuration: const Duration(milliseconds: 250),
@@ -157,76 +242,154 @@ class AppStore extends ChangeNotifier {
     );
   }
 
-  Color get appTextColor => materialTheme.brightness == Brightness.dark ? Colors.white : Colors.black;
+  ThemeData get materialTheme {
+    if (_cachedMaterialThemeId == settings.appThemeId &&
+        _cachedMaterialTheme != null) {
+      return _cachedMaterialTheme!;
+    }
+    _cachedMaterialThemeId = settings.appThemeId;
+    _cachedMaterialTheme = _buildMaterialTheme();
+    return _cachedMaterialTheme!;
+  }
 
-  Map<String, dynamic> get currentValues => valuesMap['${mode.name}:${selectedUseCase.id}'] ?? <String, dynamic>{};
+  Color get appTextColor =>
+      materialTheme.brightness == Brightness.dark ? Colors.white : Colors.black;
 
-  String get payload => buildPayload(mode, selectedUseCase, currentValues).payload;
+  Map<String, dynamic> get currentValues =>
+      _valuesMap['${mode.name}:${selectedUseCase.id}'] ?? <String, dynamic>{};
 
-  String get payloadError => buildPayload(mode, selectedUseCase, currentValues).error;
+  PayloadResult get _currentPayloadResult {
+    // Build a lightweight cache key from the inputs that affect the payload.
+    // currentValues is a Map so use its identity — it is always replaced
+    // (not mutated in place) by setField, so identity comparison is correct.
+    final key =
+        '${mode.name}:${selectedUseCase.id}:${identityHashCode(currentValues)}';
+    if (_cachedPayloadKey == key && _cachedPayloadResult != null) {
+      return _cachedPayloadResult!;
+    }
+    _cachedPayloadKey = key;
+    _cachedPayloadResult = buildPayload(mode, selectedUseCase, currentValues);
+    return _cachedPayloadResult!;
+  }
+
+  String get payload => _currentPayloadResult.payload;
+
+  String get payloadError => _currentPayloadResult.error;
 
   Future<void> initialize() async {
     final loaded = await _persistenceService.load();
-    final shouldMigrateSaveDir = loaded.settings.saveRootPath.isEmpty ||
+    final shouldMigrateSaveDir =
+        loaded.settings.saveRootPath.isEmpty ||
         loaded.settings.saveRootPath.contains('qrcodet_mobile') ||
         loaded.settings.saveRootPath.contains('/Android/data/');
-    final saveDir = await resolveSaveDirectory(shouldMigrateSaveDir ? '' : loaded.settings.saveRootPath);
+    final saveDir = shouldMigrateSaveDir
+        ? await _resolveBootstrapSaveDirectory()
+        : await resolveSaveDirectory(loaded.settings.saveRootPath);
 
-    settings = loaded.settings.copyWith(saveRootPath: saveDir.path, saveDirectoryPath: saveDir.path);
-    history = loaded.history.take(loaded.settings.historyLimit).toList();
-    presets = loaded.presets;
-    generatorThemeId = settings.generatorThemeId;
-    header = settings.defaultHeader;
-    footer = settings.defaultFooter;
-    frameId = settings.defaultFrameId;
-    ui.loading = false;
+    _settings = loaded.settings.copyWith(
+      saveRootPath: saveDir.path,
+      saveDirectoryPath: saveDir.path,
+    );
+    _history = loaded.history.take(loaded.settings.historyLimit).toList();
+    _presets = loaded.presets;
+    _generatorThemeId = _settings.generatorThemeId;
+    _header = _settings.defaultHeader;
+    _footer = _settings.defaultFooter;
+    _frameId = _settings.defaultFrameId;
+    _ui.loading = false;
     _safeNotify();
 
-    await _persistenceService.persistSettings(settings.copyWith(saveRootPath: saveDir.path, saveDirectoryPath: saveDir.path));
+    await _persistenceService.persistSettings(
+      settings.copyWith(
+        saveRootPath: saveDir.path,
+        saveDirectoryPath: saveDir.path,
+      ),
+    );
+  }
+
+  Future<Directory> _resolveBootstrapSaveDirectory() async {
+    if (Platform.isAndroid) {
+      final legacy = Directory('/storage/emulated/0/DCIM/QRCodetGallery');
+      try {
+        if (await legacy.exists()) {
+          final hasPng = legacy.listSync().any(
+            (item) => item is File && item.path.toLowerCase().endsWith('.png'),
+          );
+          if (hasPng) {
+            return legacy;
+          }
+        }
+      } catch (_) {
+        // Fall back to app directory below.
+      }
+    }
+    return resolveSaveDirectory('');
   }
 
   void setTabIndex(int value) {
     if (ui.tabIndex == value) return;
-    ui.tabIndex = value;
+    _ui.tabIndex = value;
     _safeNotify();
   }
 
   void setRuntimeMessage(String value) {
     if (ui.runtimeMessage == value) return;
-    ui.runtimeMessage = value;
+    _ui.runtimeMessage = value;
     _safeNotify();
   }
 
   Future<void> updateSetting(AppSettings next) async {
-    settings = next;
+    _settings = next;
     _safeNotify();
     await _persistenceService.persistSettings(next);
   }
 
-  void runSetState(VoidCallback updates) {
-    updates();
+  Future<void> setGeneratorThemeAndPersist(String value) async {
+    if (_generatorThemeId == value && _settings.generatorThemeId == value) {
+      return;
+    }
+    _generatorThemeId = value;
+    _settings = _settings.copyWith(generatorThemeId: value);
     _safeNotify();
+    await _persistenceService.persistSettings(_settings);
+  }
+
+  Future<void> setDefaultFrameAndPersist(String value) async {
+    if (_frameId == value && _settings.defaultFrameId == value) return;
+    _frameId = value;
+    _settings = _settings.copyWith(defaultFrameId: value);
+    _safeNotify();
+    await _persistenceService.persistSettings(_settings);
   }
 
   void setField(String fieldName, dynamic value) {
     final key = '${mode.name}:${selectedUseCase.id}';
-    final next = Map<String, dynamic>.from(valuesMap[key] ?? <String, dynamic>{});
+    final next = Map<String, dynamic>.from(
+      _valuesMap[key] ?? <String, dynamic>{},
+    );
     next[fieldName] = value;
-    valuesMap[key] = next;
-    setRuntimeMessage('');
+    _valuesMap[key] = next;
+    // Clear the runtime message if one is showing, but always notify
+    // regardless — the QR preview must update on every keystroke.
+    if (_ui.runtimeMessage.isNotEmpty) {
+      _ui.runtimeMessage = '';
+    }
+    _safeNotify();
   }
 
   void setUseCase(String id) {
     FocusManager.instance.primaryFocus?.unfocus();
     if (mode == CodeMode.qr) {
-      selectedQrId = id;
+      _selectedQrId = id;
     } else {
-      selectedBarcodeId = id;
+      _selectedBarcodeId = id;
     }
     final defaults = selectedUseCase.defaults;
-    header = defaults['header']?.toString() ?? header;
-    footer = defaults['footer']?.toString() ?? footer;
-    setRuntimeMessage('');
+    _header = defaults['header']?.toString() ?? _header;
+    _footer = defaults['footer']?.toString() ?? _footer;
+    if (_ui.runtimeMessage.isNotEmpty) {
+      _ui.runtimeMessage = '';
+    }
     _safeNotify();
   }
 
@@ -234,15 +397,24 @@ class AppStore extends ChangeNotifier {
     return resolveSaveDirectory(settings.saveRootPath);
   }
 
-  Future<void> saveGeneratedCode({required Future<Uint8List?> Function() captureBytes}) async {
+  Future<void> saveGeneratedCode({
+    required Future<Uint8List?> Function() captureBytes,
+  }) async {
+    if (_disposed) return;
     if (payload.isEmpty || payloadError.isNotEmpty) {
       focusFirstMissingRequiredField();
-      setRuntimeMessage(payloadError.isNotEmpty ? payloadError : 'Fill required fields before saving.');
+      setRuntimeMessage(
+        payloadError.isNotEmpty
+            ? payloadError
+            : 'Fill required fields before saving.',
+      );
       return;
     }
-    saving = true;
-    setRuntimeMessage('');
-    _safeNotify();
+    _saving = true;
+    if (_ui.runtimeMessage.isNotEmpty) {
+      _ui.runtimeMessage = '';
+    }
+    if (!_disposed) notifyListeners();
     try {
       final result = await _createService.saveGeneratedCode(
         payload: payload,
@@ -252,26 +424,37 @@ class AppStore extends ChangeNotifier {
         saveDirectory: saveDirectory,
       );
       if (result.savedPath != null && result.folderPath != null) {
-        lastSavedPath = result.savedPath!;
+        _lastSavedPath = result.savedPath!;
+        _galleryVersion += 1;
         showSaveSuccessNotice(result.savedPath!, result.folderPath!);
       }
       setRuntimeMessage(result.message);
-      _safeNotify();
     } finally {
-      saving = false;
-      _safeNotify();
+      if (!_disposed) {
+        _saving = false;
+        notifyListeners();
+      }
     }
   }
 
-  Future<void> shareGeneratedCode({required Future<Uint8List?> Function() captureBytes}) async {
+  Future<void> shareGeneratedCode({
+    required Future<Uint8List?> Function() captureBytes,
+  }) async {
+    if (_disposed) return;
     if (payload.isEmpty || payloadError.isNotEmpty) {
       focusFirstMissingRequiredField();
-      setRuntimeMessage(payloadError.isNotEmpty ? payloadError : 'Fill required fields before sharing.');
+      setRuntimeMessage(
+        payloadError.isNotEmpty
+            ? payloadError
+            : 'Fill required fields before sharing.',
+      );
       return;
     }
-    sharing = true;
-    setRuntimeMessage('');
-    _safeNotify();
+    _sharing = true;
+    if (_ui.runtimeMessage.isNotEmpty) {
+      _ui.runtimeMessage = '';
+    }
+    if (!_disposed) notifyListeners();
     try {
       final result = await _createService.shareGeneratedCode(
         payload: payload,
@@ -281,8 +464,10 @@ class AppStore extends ChangeNotifier {
       );
       setRuntimeMessage(result.message);
     } finally {
-      sharing = false;
-      _safeNotify();
+      if (!_disposed) {
+        _sharing = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -294,7 +479,8 @@ class AppStore extends ChangeNotifier {
   void focusFirstMissingRequiredField() {
     for (final field in selectedUseCase.fields.where((item) => item.required)) {
       final value = currentValues[field.name];
-      final missing = value == null || (value is String && value.trim().isEmpty);
+      final missing =
+          value == null || (value is String && value.trim().isEmpty);
       if (!missing) continue;
       focusNodeForField(field.name).requestFocus();
       return;
@@ -304,64 +490,40 @@ class AppStore extends ChangeNotifier {
   Future<void> pickSaveDirectory() async {
     final dir = await _settingsService.pickSaveDirectory();
     if (dir == null) return;
-    final next = settings.copyWith(saveRootPath: dir.path, saveDirectoryPath: dir.path);
+    final next = settings.copyWith(
+      saveRootPath: dir.path,
+      saveDirectoryPath: dir.path,
+    );
     await updateSetting(next);
+    _galleryVersion += 1;
     setRuntimeMessage('Default save folder changed to ${dir.path}');
   }
 
-  Future<void> openSaveFolderAction() async {
-    final dir = await saveDirectory();
-    setRuntimeMessage('Active save folder: ${dir.path}');
-    final navigatorContext = navigatorKey.currentContext;
-    if (navigatorContext == null || !navigatorContext.mounted) return;
-    await showModalBottomSheet<void>(
-      context: navigatorContext,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'Active Save Folder',
-                style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: appTextColor,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              SelectableText(
-                dir.path,
-                style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                      fontFamily: 'monospace',
-                      color: appTextColor,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: <Widget>[
-                  FilledButton.icon(
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: dir.path));
-                      showSnackBar(const SnackBar(content: Text('Save folder path copied.')));
-                    },
-                    icon: const Icon(Icons.copy_rounded),
-                    label: const Text('Copy Path'),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(sheetContext).pop(),
-                    child: const Text('Close'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  Future<void> openSaveFolder() async {
+    final path = _settings.saveDirectoryPath;
+    if (path.isEmpty) {
+      _showSnack('No save folder configured yet.');
+      return;
+    }
+
+    if (Platform.isAndroid) {
+      try {
+        await AndroidIntent(
+          action: 'android.intent.action.VIEW',
+          type: 'resource/folder',
+          data: Uri.file(path).toString(),
+        ).launch();
+      } catch (_) {
+        await SharePlus.instance.share(ShareParams(text: path));
+      }
+    } else if (Platform.isIOS) {
+      await SharePlus.instance.share(ShareParams(text: path));
+    } else {
+      final uri = Uri.file(path);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    }
   }
 
   void showSaveSuccessNotice(String filePath, String folderPath) {
@@ -385,6 +547,10 @@ class AppStore extends ChangeNotifier {
     messenger.showSnackBar(snackBar);
   }
 
+  void _showSnack(String message) {
+    showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> savePreset() async {
     if (presetName.trim().isEmpty) return;
     final preset = _createService.buildPreset(
@@ -400,41 +566,44 @@ class AppStore extends ChangeNotifier {
       cornerStyleId: cornerStyleId,
       errorLevel: qrErrorLevel,
     );
-    presets = <GeneratorPreset>[preset, ...presets];
-    presetName = '';
+    _presets = <GeneratorPreset>[preset, ..._presets];
+    _presetName = '';
     _safeNotify();
     await _persistenceService.persistPresets(presets);
   }
 
   Future<void> loadPreset(GeneratorPreset preset) async {
-    mode = preset.mode == CodeMode.barcode.name ? CodeMode.barcode : CodeMode.qr;
+    _mode = preset.mode == CodeMode.barcode.name
+        ? CodeMode.barcode
+        : CodeMode.qr;
     if (preset.mode == CodeMode.barcode.name) {
-      selectedBarcodeId = preset.useCaseId;
+      _selectedBarcodeId = preset.useCaseId;
     } else {
-      selectedQrId = preset.useCaseId;
+      _selectedQrId = preset.useCaseId;
     }
-    valuesMap['${preset.mode}:${preset.useCaseId}'] = Map<String, dynamic>.from(preset.values);
-    header = preset.header;
-    footer = preset.footer;
-    generatorThemeId = preset.themeId;
-    frameId = preset.frameId;
-    qrStyleId = preset.qrStyleId;
-    cornerStyleId = preset.cornerStyleId;
-    qrErrorLevel = preset.errorLevel;
-    ui.tabIndex = 0;
+    _valuesMap['${preset.mode}:${preset.useCaseId}'] =
+        Map<String, dynamic>.from(preset.values);
+    _header = preset.header;
+    _footer = preset.footer;
+    _generatorThemeId = preset.themeId;
+    _frameId = preset.frameId;
+    _qrStyleId = preset.qrStyleId;
+    _cornerStyleId = preset.cornerStyleId;
+    _qrErrorLevel = preset.errorLevel;
+    _ui.tabIndex = 0;
     _safeNotify();
   }
 
   Future<void> deletePreset(String id) async {
-    presets = presets.where((item) => item.id != id).toList();
+    _presets = _presets.where((item) => item.id != id).toList();
     _safeNotify();
     await _persistenceService.persistPresets(presets);
   }
 
   Future<void> analyzeImageFromGallery() async {
+    if (_disposed) return;
     final barcode = await _scanService.analyzeImageFromGallery(
       imagePicker: _imagePicker,
-      controllerBuilder: buildScannerController,
     );
     try {
       if (barcode == null) {
@@ -452,6 +621,7 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<void> handleScan(Barcode barcode) async {
+    if (_disposed) return;
     final rawValue = barcode.rawValue?.trim() ?? '';
     if (rawValue.isEmpty) return;
     final (insight, nextHistory) = _scanService.processScan(
@@ -459,22 +629,22 @@ class AppStore extends ChangeNotifier {
       currentHistory: history,
       historyLimit: settings.historyLimit,
     );
-    history = nextHistory;
-    scanInsight = insight;
+    _history = nextHistory;
+    _scanInsight = insight;
     setRuntimeMessage('Scanned ${insight.typeLabel}');
-    ui.tabIndex = 1;
+    _ui.tabIndex = 1;
     _safeNotify();
     await _persistenceService.persistHistory(history);
   }
 
   Future<void> clearHistory() async {
-    history = <ScanRecord>[];
+    _history = <ScanRecord>[];
     _safeNotify();
     await _persistenceService.persistHistory(history);
   }
 
   void restoreHistory(ScanRecord record) {
-    scanInsight = describeScan(record.rawValue, record.codeType);
+    _scanInsight = describeScan(record.rawValue, record.codeType);
     _safeNotify();
   }
 
@@ -484,55 +654,103 @@ class AppStore extends ChangeNotifier {
       history: history,
       nextLimit: nextLimit,
     );
-    history = nextHistory;
+    _history = nextHistory;
     await updateSetting(nextSettings);
     await _persistenceService.persistHistory(history);
   }
 
   void setMode(CodeMode nextMode) {
-    if (mode == nextMode) return;
-    mode = nextMode;
-    setRuntimeMessage('');
+    if (_mode == nextMode) return;
+    _mode = nextMode;
+    if (_ui.runtimeMessage.isNotEmpty) {
+      _ui.runtimeMessage = '';
+    }
     _safeNotify();
   }
 
   void setHeader(String value) {
-    header = value;
+    _header = value;
     _safeNotify();
   }
 
   void setFooter(String value) {
-    footer = value;
+    _footer = value;
     _safeNotify();
   }
 
   void setGeneratorThemeId(String value) {
-    generatorThemeId = value;
+    _generatorThemeId = value;
     _safeNotify();
   }
 
   void setFrameId(String value) {
-    frameId = value;
+    _frameId = value;
     _safeNotify();
   }
 
   void setQrStyleId(String value) {
-    qrStyleId = value;
+    _qrStyleId = value;
     _safeNotify();
   }
 
   void setCornerStyleId(String value) {
-    cornerStyleId = value;
+    _cornerStyleId = value;
     _safeNotify();
   }
 
   void setQrErrorLevel(String value) {
-    qrErrorLevel = value;
+    _qrErrorLevel = value;
     _safeNotify();
   }
 
   void setPresetName(String value) {
-    presetName = value;
+    _presetName = value;
+  }
+
+  Future<List<FileSystemEntity>> loadGalleryEntities() async {
+    final dir = await saveDirectory();
+    if (!await dir.exists()) return <FileSystemEntity>[];
+    final items =
+        dir
+            .listSync()
+            .where((item) => item.path.toLowerCase().endsWith('.png'))
+            .toList()
+          ..sort(
+            (a, b) => b.statSync().modified.compareTo(a.statSync().modified),
+          );
+    return items;
+  }
+
+  Future<void> deleteGalleryEntity(String path) async {
+    final file = File(path);
+    if (await file.exists()) {
+      await file.delete();
+    }
+    _galleryVersion += 1;
+    _safeNotify();
+  }
+
+  Future<void> openGalleryEntityInFiles(String path) async {
+    final result = await OpenFilex.open(path);
+    if (result.type == ResultType.done) return;
+    setRuntimeMessage('Open failed: ${result.message}');
+  }
+
+  Future<void> shareGalleryEntity(String path) async {
+    try {
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          files: <XFile>[XFile(path)],
+          title: 'Share PNG',
+          text: 'Shared from QRCodet',
+        ),
+      );
+      if (result.status == ShareResultStatus.success) {
+        setRuntimeMessage('Shared successfully.');
+      }
+    } catch (error) {
+      setRuntimeMessage('Share failed: $error');
+    }
   }
 
   void _safeNotify() {
@@ -546,6 +764,11 @@ class AppStore extends ChangeNotifier {
     for (final node in _fieldFocusNodes.values) {
       node.dispose();
     }
+    _fieldFocusNodes.clear();
+    _cachedMaterialTheme = null;
+    _cachedMaterialThemeId = null;
+    _cachedPayloadResult = null;
+    _cachedPayloadKey = null;
     super.dispose();
   }
 }

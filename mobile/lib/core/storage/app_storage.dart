@@ -3,23 +3,24 @@ import 'dart:io';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 
-Future<String> saveQrToGallery(List<int> bytes, String filename) async {
+Future<void> saveQrToGallery(List<int> bytes, String filename) async {
   final tmp = await getTemporaryDirectory();
   final tmpFile = File('${tmp.path}/$filename');
   await tmpFile.writeAsBytes(bytes, flush: true);
-
-  final hasAccess = await Gal.hasAccess(toAlbum: true);
-  if (!hasAccess) {
-    final granted = await Gal.requestAccess(toAlbum: true);
-    if (!granted) {
-      throw Exception('Gallery permission denied');
+  try {
+    final hasAccess = await Gal.hasAccess(toAlbum: true);
+    if (!hasAccess) {
+      final granted = await Gal.requestAccess(toAlbum: true);
+      if (!granted) {
+        throw Exception('Gallery permission denied');
+      }
+    }
+    await Gal.putImage(tmpFile.path, album: 'QRCodet');
+  } finally {
+    if (await tmpFile.exists()) {
+      await tmpFile.delete();
     }
   }
-
-  await Gal.putImage(tmpFile.path, album: 'QRCodet');
-  final path = tmpFile.path;
-  await tmpFile.delete();
-  return path;
 }
 
 Future<Directory> resolveAppCacheDirectory() async {
@@ -38,18 +39,6 @@ Future<Directory> resolveSaveDirectory(String? customRoot) async {
       await custom.create(recursive: true);
     }
     return custom;
-  }
-  if (Platform.isAndroid) {
-    final dcimFolder = Directory('/storage/emulated/0/DCIM/QRCodetGallery');
-    try {
-      if (!await dcimFolder.exists()) {
-        await dcimFolder.create(recursive: true);
-      }
-      return dcimFolder;
-    } catch (_) {
-      // Scoped-storage/device restrictions can block direct shared-path writes.
-      // Fall back to app-local storage so save flow remains functional.
-    }
   }
   return resolveAppCacheDirectory();
 }

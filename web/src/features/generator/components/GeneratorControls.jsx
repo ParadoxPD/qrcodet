@@ -68,22 +68,34 @@ export default function GeneratorControls({
   const [fieldsCollapsed, setFieldsCollapsed] = useState(false);
   const [appearanceCollapsed, setAppearanceCollapsed] = useState(false);
   const [presetCollapsed, setPresetCollapsed] = useState(false);
+  const [layoutReady, setLayoutReady] = useState(false);
   const lightThemes = themes.filter((theme) => theme.mood === "light");
   const darkThemes = themes.filter((theme) => theme.mood === "dark");
 
   useEffect(() => {
+    let previousMobile = null;
     const syncPanels = () => {
       const mobile = window.innerWidth <= 720;
       setIsMobile(mobile);
-      setUseCaseCollapsed(mobile);
-      setFieldsCollapsed(false);
-      setAppearanceCollapsed(mobile);
-      setPresetCollapsed(mobile);
+      if (previousMobile === null) {
+        setUseCaseCollapsed(mobile);
+        setFieldsCollapsed(false);
+        setAppearanceCollapsed(mobile);
+        setPresetCollapsed(mobile);
+        setLayoutReady(true);
+      } else if (!previousMobile && mobile) {
+        setUseCaseCollapsed(true);
+        setAppearanceCollapsed(true);
+        setPresetCollapsed(true);
+      }
+      previousMobile = mobile;
     };
     syncPanels();
     window.addEventListener("resize", syncPanels);
     return () => window.removeEventListener("resize", syncPanels);
   }, []);
+
+  if (!layoutReady) return null;
 
   return (
     <section className="control-stack">

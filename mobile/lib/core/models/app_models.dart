@@ -8,7 +8,13 @@ class PayloadResult {
 }
 
 class ScanInsight {
-  ScanInsight({required this.typeLabel, required this.title, required this.payload, required this.fields, required this.usefulInfo});
+  ScanInsight({
+    required this.typeLabel,
+    required this.title,
+    required this.payload,
+    required this.fields,
+    required this.usefulInfo,
+  });
 
   final String typeLabel;
   final String title;
@@ -25,7 +31,14 @@ class KeyValue {
 }
 
 class ThemeSpec {
-  ThemeSpec({required this.id, required this.label, required this.dark, required this.light, required this.accent, required this.mood});
+  ThemeSpec({
+    required this.id,
+    required this.label,
+    required this.dark,
+    required this.light,
+    required this.accent,
+    required this.mood,
+  });
 
   final String id;
   final String label;
@@ -42,7 +55,16 @@ enum CodeMode { qr, barcode }
 enum FieldKind { text, number, select, checkbox, datetime }
 
 class FieldSpec {
-  const FieldSpec({required this.name, required this.label, required this.helperText, this.placeholder = '', this.required = false, this.kind = FieldKind.text, this.options = const <String>[], this.defaultValue = ''});
+  const FieldSpec({
+    required this.name,
+    required this.label,
+    required this.helperText,
+    this.placeholder = '',
+    this.required = false,
+    this.kind = FieldKind.text,
+    this.options = const <String>[],
+    this.defaultValue = '',
+  });
 
   final String name;
   final String label;
@@ -51,11 +73,20 @@ class FieldSpec {
   final bool required;
   final FieldKind kind;
   final List<String> options;
-  final dynamic defaultValue;
+  final Object? defaultValue;
 }
 
 class UseCaseSpec {
-  const UseCaseSpec({required this.id, required this.label, required this.description, required this.filenamePrefix, required this.builderId, required this.category, this.defaults = const <String, dynamic>{}, this.fields = const <FieldSpec>[]});
+  const UseCaseSpec({
+    required this.id,
+    required this.label,
+    required this.description,
+    required this.filenamePrefix,
+    required this.builderId,
+    required this.category,
+    this.defaults = const <String, dynamic>{},
+    this.fields = const <FieldSpec>[],
+  });
 
   final String id;
   final String label;
@@ -68,24 +99,50 @@ class UseCaseSpec {
 }
 
 class AppSettings {
-  AppSettings({required this.appThemeId, required this.generatorThemeId, required this.focusProfile, required this.autoZoom, required this.preferFrontCamera, required this.hapticsEnabled, required this.historyLimit, required this.saveRootPath, required this.saveDirectoryPath, required this.defaultFrameId, required this.defaultHeader, required this.defaultFooter});
+  AppSettings({
+    required this.appThemeId,
+    required this.generatorThemeId,
+    required this.focusProfile,
+    required this.autoZoom,
+    required this.preferFrontCamera,
+    required this.hapticsEnabled,
+    required this.historyLimit,
+    required this.saveRootPath,
+    required this.saveDirectoryPath,
+    required this.defaultFrameId,
+    required this.defaultHeader,
+    required this.defaultFooter,
+  });
 
-  factory AppSettings.defaults() => AppSettings(appThemeId: 'noir', generatorThemeId: 'noir', focusProfile: 'balanced', autoZoom: true, preferFrontCamera: false, hapticsEnabled: true, historyLimit: 100, saveRootPath: '', saveDirectoryPath: '', defaultFrameId: 'scan', defaultHeader: 'Scan & Pay', defaultFooter: 'Powered by QRCodet');
+  factory AppSettings.defaults() => AppSettings(
+    appThemeId: 'noir',
+    generatorThemeId: 'noir',
+    focusProfile: 'balanced',
+    autoZoom: true,
+    preferFrontCamera: false,
+    hapticsEnabled: true,
+    historyLimit: 100,
+    saveRootPath: '',
+    saveDirectoryPath: '',
+    defaultFrameId: 'scan',
+    defaultHeader: 'Scan & Pay',
+    defaultFooter: 'Powered by QRCodet',
+  );
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
-        appThemeId: json['appThemeId']?.toString() ?? 'noir',
-        generatorThemeId: json['generatorThemeId']?.toString() ?? 'noir',
-        focusProfile: json['focusProfile']?.toString() ?? 'balanced',
-        autoZoom: json['autoZoom'] == true,
-        preferFrontCamera: json['preferFrontCamera'] == true,
-        hapticsEnabled: json['hapticsEnabled'] != false,
-        historyLimit: (json['historyLimit'] as num?)?.toInt() ?? 100,
-        saveRootPath: json['saveRootPath']?.toString() ?? '',
-        saveDirectoryPath: json['saveDirectoryPath']?.toString() ?? '',
-        defaultFrameId: json['defaultFrameId']?.toString() ?? 'scan',
-        defaultHeader: json['defaultHeader']?.toString() ?? 'Scan & Pay',
-        defaultFooter: json['defaultFooter']?.toString() ?? 'Powered by QRCodet',
-      );
+    appThemeId: json['appThemeId']?.toString() ?? 'noir',
+    generatorThemeId: json['generatorThemeId']?.toString() ?? 'noir',
+    focusProfile: json['focusProfile']?.toString() ?? 'balanced',
+    autoZoom: json['autoZoom'] == true,
+    preferFrontCamera: json['preferFrontCamera'] == true,
+    hapticsEnabled: json['hapticsEnabled'] != false,
+    historyLimit: (json['historyLimit'] as num?)?.toInt() ?? 100,
+    saveRootPath: json['saveRootPath']?.toString() ?? '',
+    saveDirectoryPath: json['saveDirectoryPath']?.toString() ?? '',
+    defaultFrameId: json['defaultFrameId']?.toString() ?? 'scan',
+    defaultHeader: json['defaultHeader']?.toString() ?? 'Scan & Pay',
+    defaultFooter: json['defaultFooter']?.toString() ?? 'Powered by QRCodet',
+  );
 
   final String appThemeId;
   final String generatorThemeId;
@@ -100,7 +157,20 @@ class AppSettings {
   final String defaultHeader;
   final String defaultFooter;
 
-  AppSettings copyWith({String? appThemeId, String? generatorThemeId, String? focusProfile, bool? autoZoom, bool? preferFrontCamera, bool? hapticsEnabled, int? historyLimit, String? saveRootPath, String? saveDirectoryPath, String? defaultFrameId, String? defaultHeader, String? defaultFooter}) {
+  AppSettings copyWith({
+    String? appThemeId,
+    String? generatorThemeId,
+    String? focusProfile,
+    bool? autoZoom,
+    bool? preferFrontCamera,
+    bool? hapticsEnabled,
+    int? historyLimit,
+    String? saveRootPath,
+    String? saveDirectoryPath,
+    String? defaultFrameId,
+    String? defaultHeader,
+    String? defaultFooter,
+  }) {
     return AppSettings(
       appThemeId: appThemeId ?? this.appThemeId,
       generatorThemeId: generatorThemeId ?? this.generatorThemeId,
@@ -118,31 +188,37 @@ class AppSettings {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'appThemeId': appThemeId,
-        'generatorThemeId': generatorThemeId,
-        'focusProfile': focusProfile,
-        'autoZoom': autoZoom,
-        'preferFrontCamera': preferFrontCamera,
-        'hapticsEnabled': hapticsEnabled,
-        'historyLimit': historyLimit,
-        'saveRootPath': saveRootPath,
-        'saveDirectoryPath': saveDirectoryPath,
-        'defaultFrameId': defaultFrameId,
-        'defaultHeader': defaultHeader,
-        'defaultFooter': defaultFooter,
-      };
+    'appThemeId': appThemeId,
+    'generatorThemeId': generatorThemeId,
+    'focusProfile': focusProfile,
+    'autoZoom': autoZoom,
+    'preferFrontCamera': preferFrontCamera,
+    'hapticsEnabled': hapticsEnabled,
+    'historyLimit': historyLimit,
+    'saveRootPath': saveRootPath,
+    'saveDirectoryPath': saveDirectoryPath,
+    'defaultFrameId': defaultFrameId,
+    'defaultHeader': defaultHeader,
+    'defaultFooter': defaultFooter,
+  };
 }
 
 class ScanRecord {
-  ScanRecord({required this.id, required this.rawValue, required this.codeType, required this.title, required this.scannedAt});
+  ScanRecord({
+    required this.id,
+    required this.rawValue,
+    required this.codeType,
+    required this.title,
+    required this.scannedAt,
+  });
 
   factory ScanRecord.fromJson(Map<String, dynamic> json) => ScanRecord(
-        id: json['id'].toString(),
-        rawValue: json['rawValue'].toString(),
-        codeType: json['codeType'].toString(),
-        title: json['title'].toString(),
-        scannedAt: (json['scannedAt'] as num).toInt(),
-      );
+    id: json['id'].toString(),
+    rawValue: json['rawValue'].toString(),
+    codeType: json['codeType'].toString(),
+    title: json['title'].toString(),
+    scannedAt: (json['scannedAt'] as num).toInt(),
+  );
 
   final String id;
   final String rawValue;
@@ -150,18 +226,41 @@ class ScanRecord {
   final String title;
   final int scannedAt;
 
-  Map<String, dynamic> toJson() => <String, dynamic>{'id': id, 'rawValue': rawValue, 'codeType': codeType, 'title': title, 'scannedAt': scannedAt};
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'rawValue': rawValue,
+    'codeType': codeType,
+    'title': title,
+    'scannedAt': scannedAt,
+  };
 }
 
 class GeneratorPreset {
-  GeneratorPreset({required this.id, required this.name, required this.mode, required this.useCaseId, required this.values, required this.header, required this.footer, required this.themeId, required this.frameId, required this.qrStyleId, required this.cornerStyleId, required this.errorLevel, required this.createdAt});
+  GeneratorPreset({
+    required this.id,
+    required this.name,
+    required this.mode,
+    required this.useCaseId,
+    required this.values,
+    required this.header,
+    required this.footer,
+    required this.themeId,
+    required this.frameId,
+    required this.qrStyleId,
+    required this.cornerStyleId,
+    required this.errorLevel,
+    required this.createdAt,
+  });
 
-  factory GeneratorPreset.fromJson(Map<String, dynamic> json) => GeneratorPreset(
+  factory GeneratorPreset.fromJson(Map<String, dynamic> json) =>
+      GeneratorPreset(
         id: json['id'].toString(),
         name: json['name'].toString(),
         mode: json['mode'].toString(),
         useCaseId: json['useCaseId'].toString(),
-        values: Map<String, dynamic>.from(json['values'] as Map<String, dynamic>),
+        values: Map<String, dynamic>.from(
+          json['values'] as Map<String, dynamic>,
+        ),
         header: json['header'].toString(),
         footer: json['footer'].toString(),
         themeId: json['themeId'].toString(),
@@ -187,18 +286,18 @@ class GeneratorPreset {
   final int createdAt;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'name': name,
-        'mode': mode,
-        'useCaseId': useCaseId,
-        'values': values,
-        'header': header,
-        'footer': footer,
-        'themeId': themeId,
-        'frameId': frameId,
-        'qrStyleId': qrStyleId,
-        'cornerStyleId': cornerStyleId,
-        'errorLevel': errorLevel,
-        'createdAt': createdAt,
-      };
+    'id': id,
+    'name': name,
+    'mode': mode,
+    'useCaseId': useCaseId,
+    'values': values,
+    'header': header,
+    'footer': footer,
+    'themeId': themeId,
+    'frameId': frameId,
+    'qrStyleId': qrStyleId,
+    'cornerStyleId': cornerStyleId,
+    'errorLevel': errorLevel,
+    'createdAt': createdAt,
+  };
 }

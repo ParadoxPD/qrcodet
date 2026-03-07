@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../core/models/app_models.dart';
 
 class AppHeader extends StatelessWidget {
-  const AppHeader({super.key, required this.theme, required this.runtimeMessage});
+  const AppHeader({
+    super.key,
+    required this.theme,
+    required this.runtimeMessage,
+  });
 
   final ThemeSpec theme;
   final String runtimeMessage;
@@ -23,17 +27,17 @@ class AppHeader extends StatelessWidget {
           Text(
             'QRCodet',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: theme.light.withValues(alpha: 0.85),
-                  letterSpacing: 1.6,
-                ),
+              color: theme.light.withValues(alpha: 0.85),
+              letterSpacing: 1.6,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
             'QR & Barcode Studio',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: theme.light,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: theme.light,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -61,12 +65,16 @@ class AppSectionTitle extends StatelessWidget {
       children: <Widget>[
         Text(
           kicker.toUpperCase(),
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 1.6),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(letterSpacing: 1.6),
         ),
         const SizedBox(height: 4),
         Text(
           title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
       ],
     );
@@ -86,14 +94,18 @@ class AppInfoTile extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
             label.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 1.2),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(letterSpacing: 1.2),
           ),
           const SizedBox(height: 4),
           Text(value),
@@ -145,11 +157,20 @@ class CodeFrameWidget extends StatelessWidget {
           ),
           child: Column(
             children: <Widget>[
-              Text(header, style: TextStyle(color: theme.dark, fontWeight: FontWeight.w700)),
+              Text(
+                header,
+                style: TextStyle(
+                  color: theme.dark,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 8),
               child,
               const SizedBox(height: 8),
-              Text(footer, style: TextStyle(color: theme.dark.withValues(alpha: 0.7))),
+              Text(
+                footer,
+                style: TextStyle(color: theme.dark.withValues(alpha: 0.7)),
+              ),
             ],
           ),
         );
@@ -169,25 +190,50 @@ class CodeFrameWidget extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(999),
-                  gradient: LinearGradient(colors: <Color>[Colors.transparent, theme.accent, Colors.transparent]),
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      Colors.transparent,
+                      theme.accent,
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
-              if (header.isNotEmpty) Text(header, style: TextStyle(color: theme.dark, fontWeight: FontWeight.w700)),
+              if (header.isNotEmpty)
+                Text(
+                  header,
+                  style: TextStyle(
+                    color: theme.dark,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               child,
               if (metaLine.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 8),
-                Text(metaLine, style: TextStyle(color: theme.dark, fontWeight: FontWeight.w600)),
+                Text(
+                  metaLine,
+                  style: TextStyle(
+                    color: theme.dark,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
               if (footer.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 6),
-                Text(footer, style: TextStyle(color: theme.dark.withValues(alpha: 0.75))),
+                Text(
+                  footer,
+                  style: TextStyle(color: theme.dark.withValues(alpha: 0.75)),
+                ),
               ],
             ],
           ),
         );
       case 'ticket':
         return Container(
-          decoration: BoxDecoration(color: theme.light, borderRadius: BorderRadius.circular(24)),
+          decoration: BoxDecoration(
+            color: theme.light,
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: Column(
             children: <Widget>[
               Container(
@@ -195,14 +241,23 @@ class CodeFrameWidget extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: theme.dark,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
                 ),
-                child: Text(header, textAlign: TextAlign.center, style: TextStyle(color: theme.light)),
+                child: Text(
+                  header,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: theme.light),
+                ),
               ),
               Padding(padding: const EdgeInsets.all(12), child: child),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Text(footer, style: TextStyle(color: theme.dark.withValues(alpha: 0.7))),
+                child: Text(
+                  footer,
+                  style: TextStyle(color: theme.dark.withValues(alpha: 0.7)),
+                ),
               ),
             ],
           ),
@@ -210,13 +265,28 @@ class CodeFrameWidget extends StatelessWidget {
       case 'badge':
         return Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: theme.dark, borderRadius: BorderRadius.circular(28)),
+          decoration: BoxDecoration(
+            color: theme.dark,
+            borderRadius: BorderRadius.circular(28),
+          ),
           child: Column(
             children: <Widget>[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(color: theme.accent, borderRadius: BorderRadius.circular(999)),
-                child: Text(header, style: TextStyle(color: theme.light, fontWeight: FontWeight.w700)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.accent,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  header,
+                  style: TextStyle(
+                    color: theme.light,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               child,
@@ -225,7 +295,10 @@ class CodeFrameWidget extends StatelessWidget {
                 Text(metaLine, style: TextStyle(color: theme.light)),
               ],
               const SizedBox(height: 6),
-              Text(footer, style: TextStyle(color: theme.light.withValues(alpha: 0.72))),
+              Text(
+                footer,
+                style: TextStyle(color: theme.light.withValues(alpha: 0.72)),
+              ),
             ],
           ),
         );
@@ -240,8 +313,18 @@ class CodeFrameWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(header, style: TextStyle(color: theme.dark, fontSize: 24, fontWeight: FontWeight.w700)),
-              Text(footer, style: TextStyle(color: theme.dark.withValues(alpha: 0.68))),
+              Text(
+                header,
+                style: TextStyle(
+                  color: theme.dark,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                footer,
+                style: TextStyle(color: theme.dark.withValues(alpha: 0.68)),
+              ),
               const SizedBox(height: 12),
               child,
             ],
@@ -252,7 +335,10 @@ class CodeFrameWidget extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             color: theme.light,
-            border: Border.all(color: theme.dark.withValues(alpha: 0.85), width: 2),
+            border: Border.all(
+              color: theme.dark.withValues(alpha: 0.85),
+              width: 2,
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -262,13 +348,19 @@ class CodeFrameWidget extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: theme.dark,
-                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(22)),
+                  borderRadius: const BorderRadius.horizontal(
+                    left: Radius.circular(22),
+                  ),
                 ),
                 child: RotatedBox(
                   quarterTurns: 3,
                   child: Text(
                     header.isEmpty ? 'SCAN' : header.toUpperCase(),
-                    style: TextStyle(color: theme.light, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+                    style: TextStyle(
+                      color: theme.light,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
               ),
@@ -281,7 +373,12 @@ class CodeFrameWidget extends StatelessWidget {
                       child,
                       if (footer.isNotEmpty) ...<Widget>[
                         const SizedBox(height: 8),
-                        Text(footer, style: TextStyle(color: theme.dark.withValues(alpha: 0.75))),
+                        Text(
+                          footer,
+                          style: TextStyle(
+                            color: theme.dark.withValues(alpha: 0.75),
+                          ),
+                        ),
                       ],
                     ],
                   ),
@@ -307,7 +404,10 @@ class CodeFrameWidget extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Text(
                       header.isEmpty ? 'Elegant Scan' : header,
-                      style: TextStyle(color: theme.dark, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        color: theme.dark,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   Expanded(child: Container(height: 1, color: theme.accent)),
@@ -317,14 +417,20 @@ class CodeFrameWidget extends StatelessWidget {
               child,
               if (footer.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 10),
-                Text(footer, style: TextStyle(color: theme.dark.withValues(alpha: 0.75))),
+                Text(
+                  footer,
+                  style: TextStyle(color: theme.dark.withValues(alpha: 0.75)),
+                ),
               ],
             ],
           ),
         );
       default:
         return Container(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), color: theme.light),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: theme.light,
+          ),
           child: Column(
             children: <Widget>[
               Container(
@@ -332,18 +438,26 @@ class CodeFrameWidget extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: theme.dark,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
                 ),
                 child: Text(
                   header,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: theme.light, fontWeight: FontWeight.w700),
+                  style: TextStyle(
+                    color: theme.light,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Padding(padding: const EdgeInsets.all(12), child: child),
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Text(footer, style: TextStyle(color: theme.dark.withValues(alpha: 0.75))),
+                child: Text(
+                  footer,
+                  style: TextStyle(color: theme.dark.withValues(alpha: 0.75)),
+                ),
               ),
             ],
           ),

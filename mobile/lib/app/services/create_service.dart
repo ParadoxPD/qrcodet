@@ -9,7 +9,11 @@ import '../../core/models/app_models.dart';
 import '../../core/storage/app_storage.dart';
 
 class SaveCodeResult {
-  SaveCodeResult({required this.message, required this.savedPath, required this.folderPath});
+  SaveCodeResult({
+    required this.message,
+    required this.savedPath,
+    required this.folderPath,
+  });
 
   final String message;
   final String? savedPath;
@@ -32,7 +36,9 @@ class CreateService {
   }) async {
     if (payload.isEmpty || payloadError.isNotEmpty) {
       return SaveCodeResult(
-        message: payloadError.isNotEmpty ? payloadError : 'Fill required fields before saving.',
+        message: payloadError.isNotEmpty
+            ? payloadError
+            : 'Fill required fields before saving.',
         savedPath: null,
         folderPath: null,
       );
@@ -40,24 +46,39 @@ class CreateService {
 
     final bytes = await captureBytes();
     if (bytes == null) {
-      return SaveCodeResult(message: 'Save failed: Exception: Preview capture failed.', savedPath: null, folderPath: null);
+      return SaveCodeResult(
+        message: 'Save failed: Exception: Preview capture failed.',
+        savedPath: null,
+        folderPath: null,
+      );
     }
 
-    final fileName = '${selectedUseCase.filenamePrefix}-${DateTime.now().millisecondsSinceEpoch}.png';
+    final fileName =
+        '${selectedUseCase.filenamePrefix}-${DateTime.now().millisecondsSinceEpoch}.png';
     try {
-      await saveQrToGallery(bytes, fileName);
       final folder = await saveDirectory();
       final localFile = File('${folder.path}/$fileName');
       await localFile.writeAsBytes(bytes, flush: true);
+      String message = 'Saved to local gallery cache.';
+      try {
+        await saveQrToGallery(bytes, fileName);
+        message = 'Saved to gallery (album: QRCodet) and local cache.';
+      } on GalException catch (error) {
+        message = 'Saved locally. Gallery save failed: ${error.type.message}';
+      } catch (error) {
+        message = 'Saved locally. Gallery save failed: $error';
+      }
       return SaveCodeResult(
-        message: 'Saved to gallery (album: QRCodet) and local cache.',
+        message: message,
         savedPath: localFile.path,
         folderPath: folder.path,
       );
-    } on GalException catch (error) {
-      return SaveCodeResult(message: 'Save failed: ${error.type.message}', savedPath: null, folderPath: null);
     } catch (error) {
-      return SaveCodeResult(message: 'Save failed: $error', savedPath: null, folderPath: null);
+      return SaveCodeResult(
+        message: 'Save failed: $error',
+        savedPath: null,
+        folderPath: null,
+      );
     }
   }
 
@@ -68,27 +89,44 @@ class CreateService {
     required UseCaseSpec selectedUseCase,
   }) async {
     if (payload.isEmpty || payloadError.isNotEmpty) {
-      return ShareCodeResult(message: payloadError.isNotEmpty ? payloadError : 'Fill required fields before sharing.');
+      return ShareCodeResult(
+        message: payloadError.isNotEmpty
+            ? payloadError
+            : 'Fill required fields before sharing.',
+      );
     }
 
     final bytes = await captureBytes();
     if (bytes == null) {
-      return ShareCodeResult(message: 'Share failed: Exception: Preview capture failed.');
+      return ShareCodeResult(
+        message: 'Share failed: Exception: Preview capture failed.',
+      );
     }
 
     try {
-      final fileName = '${selectedUseCase.filenamePrefix}-${DateTime.now().millisecondsSinceEpoch}.png';
+      final fileName =
+          '${selectedUseCase.filenamePrefix}-${DateTime.now().millisecondsSinceEpoch}.png';
       final tmp = await getTemporaryDirectory();
       final file = File('${tmp.path}/$fileName');
-      await file.writeAsBytes(bytes, flush: true);
-      final result = await SharePlus.instance.share(
-        ShareParams(
-          files: <XFile>[XFile(file.path)],
-          text: 'Generated with QRCodet',
-          title: 'Share QR Code',
-        ),
-      );
-      return ShareCodeResult(message: result.status == ShareResultStatus.success ? 'Shared successfully.' : 'Share canceled.');
+      try {
+        await file.writeAsBytes(bytes, flush: true);
+        final result = await SharePlus.instance.share(
+          ShareParams(
+            files: <XFile>[XFile(file.path)],
+            text: 'Generated with QRCodet',
+            title: 'Share QR Code',
+          ),
+        );
+        return ShareCodeResult(
+          message: result.status == ShareResultStatus.success
+              ? 'Shared successfully.'
+              : 'Share canceled.',
+        );
+      } finally {
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
     } catch (error) {
       return ShareCodeResult(message: 'Share failed: $error');
     }

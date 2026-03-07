@@ -4,52 +4,39 @@ import 'package:zxing_lib/qrcode.dart';
 import '../models/app_models.dart';
 
 ErrorCorrectionLevel toQrErrorLevel(String level) {
-  switch (level) {
-    case 'L':
-      return ErrorCorrectionLevel.L;
-    case 'M':
-      return ErrorCorrectionLevel.M;
-    case 'Q':
-      return ErrorCorrectionLevel.Q;
-    case 'H':
-      return ErrorCorrectionLevel.H;
-    default:
-      return ErrorCorrectionLevel.M;
-  }
+  return switch (level) {
+    'L' => ErrorCorrectionLevel.L,
+    'M' => ErrorCorrectionLevel.M,
+    'Q' => ErrorCorrectionLevel.Q,
+    'H' => ErrorCorrectionLevel.H,
+    _ => ErrorCorrectionLevel.M,
+  };
 }
 
 bc.Barcode barcodeFactoryFor(String id) {
-  switch (id) {
-    case 'code39':
-      return bc.Barcode.code39();
-    case 'code93':
-      return bc.Barcode.code93();
-    case 'codabar':
-      return bc.Barcode.codabar();
-    case 'ean13':
-      return bc.Barcode.ean13();
-    case 'upca':
-      return bc.Barcode.upcA();
-    case 'upce':
-      return bc.Barcode.upcE();
-    case 'ean8':
-      return bc.Barcode.ean8();
-    case 'itf14':
-      return bc.Barcode.itf14();
-    case 'pdf417':
-      return bc.Barcode.pdf417();
-    case 'datamatrix':
-      return bc.Barcode.dataMatrix();
-    case 'aztec':
-      return bc.Barcode.aztec();
-    default:
-      return bc.Barcode.code128();
-  }
+  return switch (id) {
+    'code39' => bc.Barcode.code39(),
+    'code93' => bc.Barcode.code93(),
+    'codabar' => bc.Barcode.codabar(),
+    'ean13' => bc.Barcode.ean13(),
+    'upca' => bc.Barcode.upcA(),
+    'upce' => bc.Barcode.upcE(),
+    'ean8' => bc.Barcode.ean8(),
+    'itf14' => bc.Barcode.itf14(),
+    'pdf417' => bc.Barcode.pdf417(),
+    'datamatrix' => bc.Barcode.dataMatrix(),
+    'aztec' => bc.Barcode.aztec(),
+    _ => bc.Barcode.code128(),
+  };
 }
 
 bool isSquareBarcode(String id) => id == 'datamatrix' || id == 'aztec';
 
-PayloadResult buildPayload(CodeMode mode, UseCaseSpec spec, Map<String, dynamic> values) {
+PayloadResult buildPayload(
+  CodeMode mode,
+  UseCaseSpec spec,
+  Map<String, dynamic> values,
+) {
   for (final field in spec.fields) {
     final value = values[field.name];
     if (field.required && (value == null || value.toString().trim().isEmpty)) {
@@ -58,27 +45,44 @@ PayloadResult buildPayload(CodeMode mode, UseCaseSpec spec, Map<String, dynamic>
   }
   if (mode == CodeMode.barcode) {
     final value = values['value']?.toString().trim() ?? '';
-    return PayloadResult(value, value.isEmpty ? 'Barcode value is required.' : '');
+    return PayloadResult(
+      value,
+      value.isEmpty ? 'Barcode value is required.' : '',
+    );
   }
 
   String getValue(String key) => values[key]?.toString().trim() ?? '';
-  switch (spec.builderId) {
-    case 'upi':
-      final params = <String, String>{'pa': getValue('pa'), 'pn': getValue('pn'), 'cu': getValue('cu').isEmpty ? 'INR' : getValue('cu')};
+  return switch (spec.builderId) {
+    'upi' => () {
+      final params = <String, String>{
+        'pa': getValue('pa'),
+        'pn': getValue('pn'),
+        'cu': getValue('cu').isEmpty ? 'INR' : getValue('cu'),
+      };
       if (getValue('am').isNotEmpty) params['am'] = getValue('am');
       if (getValue('tn').isNotEmpty) params['tn'] = getValue('tn');
       if (getValue('mc').isNotEmpty) params['mc'] = getValue('mc');
-      return PayloadResult('upi://pay?${Uri(queryParameters: params).query}', '');
-    case 'url':
-    case 'youtube':
-    case 'x':
+      return PayloadResult(
+        'upi://pay?${Uri(queryParameters: params).query}',
+        '',
+      );
+    }(),
+    'url' || 'youtube' || 'x' => () {
       final url = getValue('url');
-      return PayloadResult(url.startsWith('http') ? url : 'https://$url', url.isEmpty ? 'URL is required.' : '');
-    case 'wifi':
+      return PayloadResult(
+        url.startsWith('http') ? url : 'https://$url',
+        url.isEmpty ? 'URL is required.' : '',
+      );
+    }(),
+    'wifi' => () {
       final hidden = values['hidden'] == true ? 'true' : 'false';
-      return PayloadResult('WIFI:T:${getValue('security')};S:${getValue('ssid')};P:${getValue('password')};H:$hidden;;', '');
-    case 'vcard':
-      return PayloadResult([
+      return PayloadResult(
+        'WIFI:T:${getValue('security')};S:${getValue('ssid')};P:${getValue('password')};H:$hidden;;',
+        '',
+      );
+    }(),
+    'vcard' => PayloadResult(
+      [
         'BEGIN:VCARD',
         'VERSION:3.0',
         'FN:${getValue('name')}',
@@ -87,12 +91,20 @@ PayloadResult buildPayload(CodeMode mode, UseCaseSpec spec, Map<String, dynamic>
         if (getValue('email').isNotEmpty) 'EMAIL:${getValue('email')}',
         if (getValue('website').isNotEmpty) 'URL:${getValue('website')}',
         'END:VCARD',
-      ].join('\n'), '');
-    case 'geo':
-      final label = getValue('label').isNotEmpty ? '?q=${Uri.encodeComponent(getValue('label'))}' : '';
-      return PayloadResult('geo:${getValue('lat')},${getValue('lng')}$label', '');
-    case 'calendar':
-      return PayloadResult([
+      ].join('\n'),
+      '',
+    ),
+    'geo' => () {
+      final label = getValue('label').isNotEmpty
+          ? '?q=${Uri.encodeComponent(getValue('label'))}'
+          : '';
+      return PayloadResult(
+        'geo:${getValue('lat')},${getValue('lng')}$label',
+        '',
+      );
+    }(),
+    'calendar' => PayloadResult(
+      [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
         'BEGIN:VEVENT',
@@ -100,30 +112,56 @@ PayloadResult buildPayload(CodeMode mode, UseCaseSpec spec, Map<String, dynamic>
         'DTSTART:${icsTime(getValue('start'))}',
         'DTEND:${icsTime(getValue('end'))}',
         if (getValue('location').isNotEmpty) 'LOCATION:${getValue('location')}',
-        if (getValue('description').isNotEmpty) 'DESCRIPTION:${getValue('description')}',
+        if (getValue('description').isNotEmpty)
+          'DESCRIPTION:${getValue('description')}',
         'END:VEVENT',
         'END:VCALENDAR',
-      ].join('\n'), '');
-    case 'event':
-      return PayloadResult([
+      ].join('\n'),
+      '',
+    ),
+    'event' => PayloadResult(
+      [
         'EVENT:${getValue('title')}',
         'START:${getValue('start')}',
         'END:${getValue('end')}',
         if (getValue('location').isNotEmpty) 'LOCATION:${getValue('location')}',
         if (getValue('host').isNotEmpty) 'HOST:${getValue('host')}',
         if (getValue('url').isNotEmpty) 'URL:${getValue('url')}',
-      ].join('\n'), '');
-    case 'sms':
+      ].join('\n'),
+      '',
+    ),
+    'sms' => () {
       final body = getValue('message');
-      return PayloadResult(body.isEmpty ? 'sms:${getValue('phone')}' : 'sms:${getValue('phone')}?body=${Uri.encodeComponent(body)}', '');
-    case 'email':
+      return PayloadResult(
+        body.isEmpty
+            ? 'sms:${getValue('phone')}'
+            : 'sms:${getValue('phone')}?body=${Uri.encodeComponent(body)}',
+        '',
+      );
+    }(),
+    'email' => () {
       final query = <String, String>{};
-      if (getValue('subject').isNotEmpty) query['subject'] = getValue('subject');
+      if (getValue('subject').isNotEmpty) {
+        query['subject'] = getValue('subject');
+      }
       if (getValue('body').isNotEmpty) query['body'] = getValue('body');
-      return PayloadResult('mailto:${getValue('to')}${query.isEmpty ? '' : '?${Uri(queryParameters: query).query}'}', '');
-    default:
-      return PayloadResult(getValue('text'), getValue('text').isEmpty ? 'Text is required.' : '');
-  }
+      return PayloadResult(
+        'mailto:${getValue('to')}${query.isEmpty ? '' : '?${Uri(queryParameters: query).query}'}',
+        '',
+      );
+    }(),
+    'text' => PayloadResult(
+      getValue('text'),
+      getValue('text').isEmpty ? 'Text is required.' : '',
+    ),
+    _ => () {
+      assert(
+        false,
+        'Unhandled builderId: ${spec.builderId}. Add a case for it in buildPayload().',
+      );
+      return PayloadResult('', 'Unknown builder: ${spec.builderId}');
+    }(),
+  };
 }
 
 String icsTime(String input) {
@@ -133,12 +171,23 @@ String icsTime(String input) {
   return '${date.year}${pad(date.month)}${pad(date.day)}T${pad(date.hour)}${pad(date.minute)}${pad(date.second)}Z';
 }
 
-Map<String, Map<String, dynamic>> createInitialValues(List<UseCaseSpec> qrUseCases, List<UseCaseSpec> barcodeUseCases) {
+Map<String, Map<String, dynamic>> createInitialValues(
+  List<UseCaseSpec> qrUseCases,
+  List<UseCaseSpec> barcodeUseCases,
+) {
   final map = <String, Map<String, dynamic>>{};
   for (final spec in <UseCaseSpec>[...qrUseCases, ...barcodeUseCases]) {
     final values = <String, dynamic>{};
     for (final field in spec.fields) {
-      values[field.name] = field.defaultValue;
+      final defaultValue = field.defaultValue;
+      values[field.name] = switch (field.kind) {
+        FieldKind.checkbox => defaultValue is bool ? defaultValue : false,
+        FieldKind.select =>
+          defaultValue is String && defaultValue.isNotEmpty
+              ? defaultValue
+              : (field.options.isNotEmpty ? field.options.first : ''),
+        _ => defaultValue?.toString() ?? '',
+      };
     }
     values.addAll(spec.defaults);
     final prefix = spec.category == 'barcode' ? 'barcode' : 'qr';

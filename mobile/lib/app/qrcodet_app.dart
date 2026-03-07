@@ -16,7 +16,9 @@ class QRCodetApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AppStore>(create: (_) => AppStore()..initialize()),
+        ChangeNotifierProvider<AppStore>(
+          create: (_) => AppStore()..initialize(),
+        ),
         ChangeNotifierProxyProvider<AppStore, ShellProvider>(
           create: (_) => ShellProvider(),
           update: (_, store, provider) => provider!..attach(store),
@@ -49,7 +51,7 @@ class _QRCodetRootView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<ShellProvider>();
-    if (vm.ui.loading) {
+    if (vm.loading) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'QRCodet',
@@ -85,12 +87,20 @@ class _QRCodetRootView extends StatelessWidget {
               children: <Widget>[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
-                  child: AppHeader(theme: vm.appTheme, runtimeMessage: vm.ui.runtimeMessage),
+                  child: AppHeader(
+                    theme: vm.appTheme,
+                    runtimeMessage: vm.runtimeMessage,
+                  ),
                 ),
                 Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    child: _buildCurrentTab(context, vm),
+                  child: IndexedStack(
+                    index: vm.tabIndex,
+                    children: <Widget>[
+                      const _CreateTabSlot(),
+                      _ScanTabSlot(isActiveTab: vm.tabIndex == 1),
+                      const _GalleryTabSlot(),
+                      const _SettingsTabSlot(),
+                    ],
                   ),
                 ),
               ],
@@ -98,51 +108,81 @@ class _QRCodetRootView extends StatelessWidget {
           ),
         ),
         bottomNavigationBar: NavigationBar(
-          selectedIndex: vm.ui.tabIndex,
+          selectedIndex: vm.tabIndex,
           onDestinationSelected: vm.setTabIndex,
           destinations: const <NavigationDestination>[
-            NavigationDestination(icon: Icon(Icons.auto_awesome), label: 'Create'),
-            NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Scan'),
-            NavigationDestination(icon: Icon(Icons.photo_library_outlined), label: 'Gallery'),
+            NavigationDestination(
+              icon: Icon(Icons.auto_awesome),
+              label: 'Create',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.qr_code_scanner),
+              label: 'Scan',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.photo_library_outlined),
+              label: 'Gallery',
+            ),
             NavigationDestination(icon: Icon(Icons.tune), label: 'Settings'),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildCurrentTab(BuildContext context, ShellProvider vm) {
-    switch (vm.ui.tabIndex) {
-      case 0:
-        return KeyedSubtree(
-          key: const ValueKey<String>('tab-create'),
-          child: CreateTabView(vm: context.watch<CreateProvider>()),
-        );
-      case 1:
-        final scanVm = context.watch<ScanProvider>();
-        return KeyedSubtree(
-          key: const ValueKey<String>('tab-scan'),
-          child: ScanTabView(
-            controllerBuilder: scanVm.buildScannerController,
-            onDetect: scanVm.handleScan,
-            onAnalyzeImage: scanVm.analyzeImageFromGallery,
-            hapticsEnabled: scanVm.hapticsEnabled,
-            insight: scanVm.scanInsight,
-            history: scanVm.history,
-            dateFormat: scanVm.dateFormat,
-            onRestoreHistory: scanVm.restoreHistory,
-          ),
-        );
-      case 2:
-        return KeyedSubtree(
-          key: const ValueKey<String>('tab-gallery'),
-          child: GalleryTabView(vm: context.watch<GalleryProvider>()),
-        );
-      default:
-        return KeyedSubtree(
-          key: const ValueKey<String>('tab-settings'),
-          child: SettingsTabView(vm: context.watch<SettingsProvider>()),
-        );
-    }
+class _CreateTabSlot extends StatelessWidget {
+  const _CreateTabSlot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CreateProvider>(
+      builder: (context, vm, child) => CreateTabView(vm: vm),
+    );
+  }
+}
+
+class _ScanTabSlot extends StatelessWidget {
+  const _ScanTabSlot({required this.isActiveTab});
+
+  final bool isActiveTab;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ScanProvider>(
+      builder: (context, vm, child) => ScanTabView(
+        isActiveTab: isActiveTab,
+        controllerBuilder: vm.buildScannerController,
+        onDetect: vm.handleScan,
+        onAnalyzeImage: vm.analyzeImageFromGallery,
+        hapticsEnabled: vm.hapticsEnabled,
+        insight: vm.scanInsight,
+        history: vm.history,
+        dateFormat: vm.dateFormat,
+        onRestoreHistory: vm.restoreHistory,
+      ),
+    );
+  }
+}
+
+class _GalleryTabSlot extends StatelessWidget {
+  const _GalleryTabSlot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<GalleryProvider>(
+      builder: (context, vm, child) => GalleryTabView(vm: vm),
+    );
+  }
+}
+
+class _SettingsTabSlot extends StatelessWidget {
+  const _SettingsTabSlot();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<SettingsProvider>(
+      builder: (context, vm, child) => SettingsTabView(vm: vm),
+    );
   }
 }

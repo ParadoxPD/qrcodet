@@ -7,7 +7,9 @@ import '../../core/storage/app_storage.dart';
 
 class SettingsService {
   Future<Directory?> pickSaveDirectory() async {
-    final selected = await FilePicker.platform.getDirectoryPath(dialogTitle: 'Select QRCodet save folder');
+    final selected = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: 'Select QRCodet save folder',
+    );
     if (selected == null || selected.isEmpty) return null;
     return resolveSaveDirectory(selected);
   }

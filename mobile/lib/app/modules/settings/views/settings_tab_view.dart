@@ -21,13 +21,28 @@ class SettingsTabView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const AppSectionTitle(kicker: 'Theme', title: 'App and generator defaults'),
+                const AppSectionTitle(
+                  kicker: 'Theme',
+                  title: 'App and generator defaults',
+                ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  key: ValueKey<String>('settings-app-theme-${vm.settings.appThemeId}'),
+                  key: ValueKey<String>(
+                    'settings-app-theme-${vm.settings.appThemeId}',
+                  ),
                   initialValue: vm.settings.appThemeId,
-                  decoration: const InputDecoration(labelText: 'App theme', border: OutlineInputBorder()),
-                  items: vm.themes.map((theme) => DropdownMenuItem<String>(value: theme.id, child: Text(theme.label))).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'App theme',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: vm.themes
+                      .map(
+                        (theme) => DropdownMenuItem<String>(
+                          value: theme.id,
+                          child: Text(theme.label),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       vm.updateSetting(vm.settings.copyWith(appThemeId: value));
@@ -36,29 +51,49 @@ class SettingsTabView extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  key: ValueKey<String>('settings-generator-theme-${vm.settings.generatorThemeId}'),
+                  key: ValueKey<String>(
+                    'settings-generator-theme-${vm.settings.generatorThemeId}',
+                  ),
                   initialValue: vm.settings.generatorThemeId,
-                  decoration: const InputDecoration(labelText: 'Default generator theme', border: OutlineInputBorder()),
-                  items: vm.themes.map((theme) => DropdownMenuItem<String>(value: theme.id, child: Text(theme.label))).toList(),
+                  decoration: const InputDecoration(
+                    labelText: 'Default generator theme',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: vm.themes
+                      .map(
+                        (theme) => DropdownMenuItem<String>(
+                          value: theme.id,
+                          child: Text(theme.label),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      vm.runSetState(() => vm.generatorThemeId = value);
-                      vm.updateSetting(vm.settings.copyWith(generatorThemeId: value));
+                      vm.setGeneratorThemeAndPersist(value);
                     }
                   },
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  key: ValueKey<String>('settings-frame-${vm.settings.defaultFrameId}'),
+                  key: ValueKey<String>(
+                    'settings-frame-${vm.settings.defaultFrameId}',
+                  ),
                   initialValue: vm.settings.defaultFrameId,
-                  decoration: const InputDecoration(labelText: 'Default frame', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: 'Default frame',
+                    border: OutlineInputBorder(),
+                  ),
                   items: frameLabels.entries
-                      .map((entry) => DropdownMenuItem<String>(value: entry.key, child: Text(entry.value)))
+                      .map(
+                        (entry) => DropdownMenuItem<String>(
+                          value: entry.key,
+                          child: Text(entry.value),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
-                      vm.runSetState(() => vm.frameId = value);
-                      vm.updateSetting(vm.settings.copyWith(defaultFrameId: value));
+                      vm.setDefaultFrameAndPersist(value);
                     }
                   },
                 ),
@@ -73,20 +108,39 @@ class SettingsTabView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const AppSectionTitle(kicker: 'Scanner', title: 'Camera and detection settings'),
+                const AppSectionTitle(
+                  kicker: 'Scanner',
+                  title: 'Camera and detection settings',
+                ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  key: ValueKey<String>('settings-focus-${vm.settings.focusProfile}'),
+                  key: ValueKey<String>(
+                    'settings-focus-${vm.settings.focusProfile}',
+                  ),
                   initialValue: vm.settings.focusProfile,
-                  decoration: const InputDecoration(labelText: 'Camera focus profile', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: 'Camera focus profile',
+                    border: OutlineInputBorder(),
+                  ),
                   items: const <DropdownMenuItem<String>>[
-                    DropdownMenuItem<String>(value: 'balanced', child: Text('Balanced')),
-                    DropdownMenuItem<String>(value: 'macro', child: Text('Close-up / Macro')),
-                    DropdownMenuItem<String>(value: 'fast', child: Text('Fast motion')),
+                    DropdownMenuItem<String>(
+                      value: 'balanced',
+                      child: Text('Balanced'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'macro',
+                      child: Text('Close-up / Macro'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'fast',
+                      child: Text('Fast motion'),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) {
-                      vm.updateSetting(vm.settings.copyWith(focusProfile: value));
+                      vm.updateSetting(
+                        vm.settings.copyWith(focusProfile: value),
+                      );
                     }
                   },
                 ),
@@ -94,23 +148,34 @@ class SettingsTabView extends StatelessWidget {
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Auto zoom assist'),
-                  subtitle: const Text('Help the scanner lock onto far-away codes.'),
+                  subtitle: const Text(
+                    'Help the scanner lock onto far-away codes.',
+                  ),
                   value: vm.settings.autoZoom,
-                  onChanged: (value) => vm.updateSetting(vm.settings.copyWith(autoZoom: value)),
+                  onChanged: (value) =>
+                      vm.updateSetting(vm.settings.copyWith(autoZoom: value)),
                 ),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Prefer front camera'),
-                  subtitle: const Text('Useful for demos and mirrored scanning setups.'),
+                  subtitle: const Text(
+                    'Useful for demos and mirrored scanning setups.',
+                  ),
                   value: vm.settings.preferFrontCamera,
-                  onChanged: (value) => vm.updateSetting(vm.settings.copyWith(preferFrontCamera: value)),
+                  onChanged: (value) => vm.updateSetting(
+                    vm.settings.copyWith(preferFrontCamera: value),
+                  ),
                 ),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Haptic feedback on scan'),
-                  subtitle: const Text('Vibrates once when a scan is detected.'),
+                  subtitle: const Text(
+                    'Vibrates once when a scan is detected.',
+                  ),
                   value: vm.settings.hapticsEnabled,
-                  onChanged: (value) => vm.updateSetting(vm.settings.copyWith(hapticsEnabled: value)),
+                  onChanged: (value) => vm.updateSetting(
+                    vm.settings.copyWith(hapticsEnabled: value),
+                  ),
                 ),
               ],
             ),
@@ -123,21 +188,34 @@ class SettingsTabView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const AppSectionTitle(kicker: 'Storage', title: 'Save folder and gallery controls'),
+                const AppSectionTitle(
+                  kicker: 'Storage',
+                  title: 'Save folder and gallery controls',
+                ),
                 const SizedBox(height: 12),
-                Text('Current save folder', style: Theme.of(context).textTheme.titleSmall),
+                Text(
+                  'Current save folder',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
                 const SizedBox(height: 8),
                 SelectableText(
                   vm.settings.saveDirectoryPath,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                 ),
                 if (vm.lastSavedPath.isNotEmpty) ...<Widget>[
                   const SizedBox(height: 12),
-                  Text('Last saved file', style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    'Last saved file',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   SelectableText(
                     vm.lastSavedPath,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -151,7 +229,7 @@ class SettingsTabView extends StatelessWidget {
                       label: const Text('Change Save Folder'),
                     ),
                     OutlinedButton.icon(
-                      onPressed: vm.openSaveFolderAction,
+                      onPressed: vm.openSaveFolder,
                       icon: const Icon(Icons.folder_open),
                       label: const Text('Open Save Folder'),
                     ),
@@ -168,9 +246,15 @@ class SettingsTabView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const AppSectionTitle(kicker: 'History', title: 'Limit and cleanup'),
+                const AppSectionTitle(
+                  kicker: 'History',
+                  title: 'Limit and cleanup',
+                ),
                 const SizedBox(height: 8),
-                Text('Stored scans: ${vm.history.length} / ${vm.settings.historyLimit}', style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                  'Stored scans: ${vm.history.length} / ${vm.settings.historyLimit}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 Slider(
                   min: 10,
                   max: 1000,
@@ -178,7 +262,10 @@ class SettingsTabView extends StatelessWidget {
                   value: vm.settings.historyLimit.clamp(10, 1000).toDouble(),
                   label: '${vm.settings.historyLimit.toInt()}',
                   onChanged: (value) async {
-                    final nextLimit = ((value / 10).round() * 10).clamp(10, 1000);
+                    final nextLimit = ((value / 10).round() * 10).clamp(
+                      10,
+                      1000,
+                    );
                     await vm.updateHistoryLimit(nextLimit);
                   },
                 ),

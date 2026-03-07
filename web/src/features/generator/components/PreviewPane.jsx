@@ -20,17 +20,27 @@ export default function PreviewPane({
 }) {
   const [isMobile, setIsMobile] = useState(false);
   const [referencesCollapsed, setReferencesCollapsed] = useState(false);
+  const [layoutReady, setLayoutReady] = useState(false);
 
   useEffect(() => {
+    let previousMobile = null;
     const sync = () => {
       const mobile = window.innerWidth <= 720;
       setIsMobile(mobile);
-      setReferencesCollapsed(mobile);
+      if (previousMobile === null) {
+        setReferencesCollapsed(mobile);
+        setLayoutReady(true);
+      } else if (!previousMobile && mobile) {
+        setReferencesCollapsed(true);
+      }
+      previousMobile = mobile;
     };
     sync();
     window.addEventListener("resize", sync);
     return () => window.removeEventListener("resize", sync);
   }, []);
+
+  if (!layoutReady) return null;
 
   const body = mode === "qr" ? (
     <canvas ref={qrCanvasRef} className={hasCode ? "qr-canvas ready" : "qr-canvas"} />

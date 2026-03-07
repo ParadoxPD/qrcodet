@@ -10,6 +10,7 @@ import '../../../views/widgets/app_widgets.dart';
 class ScanTabView extends StatefulWidget {
   const ScanTabView({
     super.key,
+    required this.isActiveTab,
     required this.controllerBuilder,
     required this.onDetect,
     required this.onAnalyzeImage,
@@ -20,6 +21,7 @@ class ScanTabView extends StatefulWidget {
     required this.onRestoreHistory,
   });
 
+  final bool isActiveTab;
   final MobileScannerController Function() controllerBuilder;
   final Future<void> Function(Barcode barcode) onDetect;
   final Future<void> Function() onAnalyzeImage;
@@ -41,25 +43,34 @@ class _ScanTabViewState extends State<ScanTabView> {
   bool _handling = false;
   bool _torchOn = false;
   bool _scannerPaused = false;
+  static const ScrollPhysics _iosScroll = BouncingScrollPhysics(
+    parent: AlwaysScrollableScrollPhysics(),
+  );
+  static const ScrollPhysics _defaultScroll = ClampingScrollPhysics();
 
   ScrollPhysics get _scrollPhysics {
     switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
-        return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+        return _iosScroll;
       default:
-        return const ClampingScrollPhysics();
+        return _defaultScroll;
     }
   }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
     _controller = widget.controllerBuilder();
+    if (widget.isActiveTab) {
+      _startIfAllowed();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     _controller.stop();
     _controller.dispose();
     _scrollController.dispose();
@@ -73,7 +84,36 @@ class _ScanTabViewState extends State<ScanTabView> {
     final oldPayload = oldWidget.insight?.payload ?? '';
     final nextPayload = widget.insight?.payload ?? '';
     if (nextPayload.isNotEmpty && oldPayload != nextPayload) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToResultSection());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _scrollToResultSection(),
+      );
+    }
+    if (widget.isActiveTab != oldWidget.isActiveTab) {
+      if (widget.isActiveTab) {
+        _startIfAllowed();
+      } else {
+        _controller.stop();
+      }
+    }
+  }
+
+  late final WidgetsBindingObserver _lifecycleObserver = _ScanLifecycleObserver(
+    onResumed: () {
+      if (!mounted || !widget.isActiveTab) return;
+      _startIfAllowed();
+    },
+    onInactive: () {
+      _controller.stop();
+    },
+  );
+
+  Future<void> _startIfAllowed() async {
+    // Do not restart while a scan result is being handled.
+    if (_scannerPaused) return;
+    try {
+      await _controller.start();
+    } catch (_) {
+      // Controller may already be running — safe to ignore.
     }
   }
 
@@ -130,12 +170,11 @@ class _ScanTabViewState extends State<ScanTabView> {
   }
 
   Future<void> _resumeScanner() async {
-    await _controller.start();
-    if (!mounted) return;
     setState(() {
       _scannerPaused = false;
       _handling = false;
     });
+    await _startIfAllowed();
   }
 
   @override
@@ -152,7 +191,10 @@ class _ScanTabViewState extends State<ScanTabView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const AppSectionTitle(kicker: 'Realtime', title: 'Scan from the camera or an image'),
+                const AppSectionTitle(
+                  kicker: 'Realtime',
+                  title: 'Scan from the camera or an image',
+                ),
                 const SizedBox(height: 12),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
@@ -217,33 +259,60 @@ class _ScanTabViewState extends State<ScanTabView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const AppSectionTitle(kicker: 'Result', title: 'Detected type, fields, and payload'),
+                  const AppSectionTitle(
+                    kicker: 'Result',
+                    title: 'Detected type, fields, and payload',
+                  ),
                   const SizedBox(height: 12),
-                  AppInfoTile(label: 'Detected type', value: insight?.typeLabel ?? 'Nothing scanned yet.'),
+                  AppInfoTile(
+                    label: 'Detected type',
+                    value: insight?.typeLabel ?? 'Nothing scanned yet.',
+                  ),
                   const SizedBox(height: 8),
-                  AppInfoTile(label: 'Summary', value: insight?.title ?? 'Awaiting a scan'),
+                  AppInfoTile(
+                    label: 'Summary',
+                    value: insight?.title ?? 'Awaiting a scan',
+                  ),
                   const SizedBox(height: 12),
                   Text('Fields', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: 8),
                   if (insight == null || insight.fields.isEmpty)
-                    const Text('Structured fields appear here when the payload is recognized.')
+                    const Text(
+                      'Structured fields appear here when the payload is recognized.',
+                    )
                   else
-                    ...insight.fields.map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: AppInfoTile(label: item.label, value: item.value),
-                        )),
+                    ...insight.fields.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: AppInfoTile(
+                          label: item.label,
+                          value: item.value,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
-                  Text('Useful info', style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    'Useful info',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   if (insight == null)
                     const Text('Scan a code to view context-aware hints.')
                   else
-                    ...insight.usefulInfo.map((item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: AppInfoTile(label: item.label, value: item.value),
-                        )),
+                    ...insight.usefulInfo.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: AppInfoTile(
+                          label: item.label,
+                          value: item.value,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 12),
-                  Text('Raw payload', style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    'Raw payload',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const SizedBox(height: 8),
                   SelectableText(
                     insight?.payload ?? '—',
@@ -261,16 +330,23 @@ class _ScanTabViewState extends State<ScanTabView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                AppSectionTitle(kicker: 'History', title: 'Recent scans (${widget.history.length})'),
+                AppSectionTitle(
+                  kicker: 'History',
+                  title: 'Recent scans (${widget.history.length})',
+                ),
                 const SizedBox(height: 12),
                 if (widget.history.isEmpty)
                   const Text('No scans yet.')
                 else
-                  ...widget.history.take(20).map(
+                  ...widget.history
+                      .take(20)
+                      .map(
                         (record) => ListTile(
                           contentPadding: EdgeInsets.zero,
                           title: Text(record.title),
-                          subtitle: Text('${record.codeType} • ${widget.dateFormat.format(DateTime.fromMillisecondsSinceEpoch(record.scannedAt))}'),
+                          subtitle: Text(
+                            '${record.codeType} • ${widget.dateFormat.format(DateTime.fromMillisecondsSinceEpoch(record.scannedAt))}',
+                          ),
                           trailing: IconButton(
                             onPressed: () => widget.onRestoreHistory(record),
                             icon: const Icon(Icons.history_rounded),
@@ -283,5 +359,25 @@ class _ScanTabViewState extends State<ScanTabView> {
         ),
       ],
     );
+  }
+}
+
+class _ScanLifecycleObserver extends WidgetsBindingObserver {
+  _ScanLifecycleObserver({required this.onResumed, required this.onInactive});
+
+  final VoidCallback onResumed;
+  final VoidCallback onInactive;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResumed();
+      return;
+    }
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      onInactive();
+    }
   }
 }
