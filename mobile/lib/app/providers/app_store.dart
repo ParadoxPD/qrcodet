@@ -507,21 +507,47 @@ class AppStore extends ChangeNotifier {
     }
 
     if (Platform.isAndroid) {
-      try {
-        await AndroidIntent(
-          action: 'android.intent.action.VIEW',
-          type: 'resource/folder',
-          data: Uri.file(path).toString(),
-        ).launch();
-      } catch (_) {
-        await SharePlus.instance.share(ShareParams(text: path));
+      final result = await OpenFilex.open(path);
+      if (result.type != ResultType.done) {
+        await Clipboard.setData(ClipboardData(text: path));
+        _showSnack('Could not open folder. Path copied to clipboard.');
       }
     } else if (Platform.isIOS) {
-      await SharePlus.instance.share(ShareParams(text: path));
+      final ctx = navigatorKey.currentContext;
+      if (ctx == null) return;
+      await showDialog<void>(
+        context: ctx,
+        builder: (dialogCtx) => AlertDialog(
+          title: const Text('Your saved codes'),
+          content: const Text(
+            'On iOS, saved codes live inside the app sandbox. '
+            'Use the Gallery tab to preview, share, or delete them.\n\n'
+            'To access files on a Mac, connect via Finder → '
+            'select your device → Files → QRCodet.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: const Text('Dismiss'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogCtx).pop();
+                setTabIndex(2); // 2 = Gallery tab
+              },
+              child: const Text('Go to Gallery'),
+            ),
+          ],
+        ),
+      );
     } else {
+      // macOS, Windows, Linux
       final uri = Uri.file(path);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
+      } else {
+        await Clipboard.setData(ClipboardData(text: path));
+        _showSnack('Could not open folder. Path copied to clipboard.');
       }
     }
   }
